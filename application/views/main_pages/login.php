@@ -1,7 +1,3 @@
-
-<div class="jumbotron">
-  <h1 class="text-center">Login Page</h1>
-</div>
 <main class="container">
   <h2 class="text-center">Login Form</h2>
     <?php echo validation_errors("<div class='error'>","</div>");?>
@@ -27,7 +23,7 @@
           <?php echo form_submit("login-button","Login",'class="btn btn-primary"'); ?>
         </div>
         <div class="col-xs-4 col-md-1">
-          <a href="site/register">
+          <a href="<?php echo site_url().'/site/register'?>">
             <?php echo form_button("register","Register",'class="btn btn-primary"'); ?>
           </a>
         </div>

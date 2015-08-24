@@ -49,10 +49,10 @@
       return $result;
     }
 
-    function register($data)
+    function create_user($data)
     {
-
-
+      $result = $this->db->insert("Scheduler_User",$data);
+      return $result;
     }
   }
 ?>
