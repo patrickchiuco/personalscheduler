@@ -1,7 +1,7 @@
 <?php
   class Event extends CI_Model
   {
-    $table_name = "Scheduler_Event";
+    private $table_name = "Scheduler_Event";
     function __construct()
     {
       parent::__construct();
@@ -12,17 +12,10 @@
       //$this->db->select("*")->from("")
     }
 
-    function add_event($event_details)
+    function add_event($data)
     {
-      if(isset($event_details))
-      {
-          $this->db->insert($table_name,$event_details);
-          return TRUE;
-      }
-      else
-      {
-          return FALSE;
-      }
+      $result = $this->db->insert($this->table_name,$data);
+      return $result;
     }
 
 
@@ -31,7 +24,7 @@
       //$this->db->
       if(isset($updated_details))
       {
-          $this->db->where("id",$id)->update($table_name,$updated_details);
+          $this->db->where("id",$id)->update($this->table_name,$updated_details);
           return TRUE;
       }
       else

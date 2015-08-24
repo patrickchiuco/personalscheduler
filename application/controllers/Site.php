@@ -60,17 +60,16 @@
     }
     function user_page()
     {
-      $user_data = array(
+      $data = array(
         "fname" => $this->session->first_name,
         "mname" => $this->session->middle_name,
         "lname" => $this->session->last_name,
         "email" => $this->session->email,
         "email_notif" => $this->session->email_notif,
+        "main_content" => "main_pages/dashboard",
       );
-      echo "<pre>";
-      print_r($user_data);
-      echo "</pre><br/>";
-      echo "Successfully logged in / registered";
+
+      load_view($data);
     }
     /*
       TODO: Transfer more computation to models
@@ -94,7 +93,7 @@
           {
             $data["errors"] = "User already exists.";
             $data['main_content'] = "main_pages/register";
-            $this->load_view($data);
+            load_view($data);
           }
           else
           {
@@ -118,26 +117,20 @@
             }
             else
             {
-
             }
           }
         }
         else
         {
           $data["main_content"] = "main_pages/register";
-          $this->load_view($data);
+          load_view($data);
         }
       }
       else
       {
         $data["main_content"] = "main_pages/register";
-        $this->load_view($data);
+        load_view($data);
       }
-    }
-
-    function load_view($data)
-    {
-      $this->load->view("common_views/base",$data);
     }
   }
 ?>
