@@ -4,18 +4,20 @@
 </div>
 <main class="container">
   <h2 class="text-center">Login Form</h2>
+    <?php echo validation_errors("<div class='error'>","</div>");?>
+    <?php if(isset($errors)){ echo $errors; }?>
   <div class="row">
     <?php echo form_open("site/login","class='form-horizontal'"); ?>
       <div class="form-group">
-        <?php echo form_label("Username: ","username",array("class" => "form-label col-xs-3 col-md-1")); ?>
+        <?php echo form_label("Email: ","email",array("class" => "form-label col-xs-3 col-md-1")); ?>
         <div class="col-xs-9 col-md-11">
-          <?php echo form_input("username",set_value("username"),"class='form-control' id='username'")."<br/>"; ?>
+          <?php echo form_input("email",set_value("email"),"class='form-control' id='email'")."<br/>"; ?>
         </div>
       </div>
       <div class="form-group">
         <?php echo form_label("Password: ","password",array("class" => "form-label col-xs-3 col-md-1")); ?>
         <div class='col-xs-9 col-md-11'>
-          <?php echo form_input("password",set_value("password"),"class='form-control' id='password'")."<br/>"; ?>
+          <?php echo form_password("password",set_value("password"),"class='form-control' id='password'")."<br/>"; ?>
         </div>
       </div>
       <div class="form-group">
