@@ -13,6 +13,18 @@
 
     }
 
+    function user_exists($email)
+    {
+      $result = $this->db->select("email, password")->where("email",$email)->get("Scheduler_User");
+      if($result->num_rows())
+      {
+        return TRUE;
+      }
+      else
+      {
+        return FALSE;
+      }
+    }
 
     function authenticate($data)
     {
