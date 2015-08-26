@@ -181,20 +181,36 @@
                 "mname" => $this->input->post('mname'),
                 "lname" => $this->input->post('lname'),
                 "email_notif" => ($this->input->post('email_notif') == "Yes") ? 1: 0,
+                "user_status" => 0,
+                "verification_code" => md5($this->input->post('email')),
             );
-            $result = $this->user->create_user($user_data);
-            if($result)
+            $has_created = $this->user->create_user($user_data);
+            $has_sent = $this->user->send_verification_email($user_data["email"],$user_data["verification_code"]);
+            if($has_sent)
             {
-              $this->session->set_userdata("email",$user_data["email"]);
-              $this->session->set_userdata("fname",$user_data["fname"]);
-              $this->session->set_userdata("mname",$user_data["mname"]);
-              $this->session->set_userdata("lname",$user_data["lname"]);
-              $this->session->set_userdata("email_notif",$user_data["email_notif"]);
-              redirect(base_url().'index.php/site/user_page');
+              if($has_created)
+              {
+                $this->session->set_userdata("email",$user_data["email"]);
+                $this->session->set_userdata("fname",$user_data["fname"]);
+                $this->session->set_userdata("mname",$user_data["mname"]);
+                $this->session->set_userdata("lname",$user_data["lname"]);
+                $this->session->set_userdata("email_notif",$user_data["email_notif"]);
+                redirect(base_url().'index.php/site/user_page');
+              }
+              else
+              {
+                $data["main_content"] = "confirmation_pages/registration";
+                $data["message"] = "User was not created. Contact admin.";
+                load_view($data);
+              }
             }
             else
             {
+              $data["main_content"] = "confirmation_pages/registration";
+              $data["message"] = "Verification email not sent; user was not created. Contact admin.";
+              load_view($data);
             }
+
           }
         }
         else
@@ -208,6 +224,37 @@
         $data["main_content"] = "main_pages/register";
         load_view($data);
       }
+    }
+
+
+    function verify($verification_text = NULL)
+    {
+      $has_verfied = $this->user->verify_email_address($verification_text);
+      if($has_verfied)
+      {
+        $error = array("success" => "Email verification successful!");
+      }
+      else
+      {
+        $error = array("error" => "Sorry unable to verify your email.");
+      }
+      $data["message"] = $error;
+      $this->load->view("confirmation_pages/verification",$data);
+    }
+
+    function send_verification_email($email, $verification_text)
+    {
+      $has_sent = $this->user->send_verification_email($email,$verification_text);
+      $data["main_content"] = "confirmation_pages/verification";
+      if($has_sent)
+      {
+        $data["message"] = "Verification was sent.";
+      }
+      else
+      {
+        $data["message"] = "Email sending failed.";
+      }
+      load_view($data);
     }
 
     function logout()
