@@ -1,4 +1,5 @@
 <?php
+  //plan implementation next time (avoid brute force)
   class Site extends CI_Controller
   {
     private $template;
@@ -113,7 +114,16 @@
         "template" => $this->template,
       );
       $this->load->library("calendar", $prefs);
-      $rows = $this->create_content($this->today->format("Y-m"));
+      if($this->uri->segment(3) !== NULL)
+      {
+          $date_received = $this->uri->segment(3)."-".$this->uri->segment(4);
+      }
+      else
+      {
+          $date_received = $this->today->format("Y-m");
+      }
+
+      $rows = $this->create_content($date_received);
       $data = array(
         "fname" => $this->session->first_name,
         "mname" => $this->session->middle_name,
@@ -125,7 +135,6 @@
         "events" => $rows["events"],
       );
 
-
       load_view($data);
     }
 
@@ -136,7 +145,7 @@
       {
         $date = $this->today->format("Y-m");
       }
-      $events = $this->event->get_event_by_month($date);
+      $events = $this->event->get_event_by_month($date,$this->session->email);
       return $events;
     }
     /*
@@ -199,6 +208,12 @@
         $data["main_content"] = "main_pages/register";
         load_view($data);
       }
+    }
+
+    function logout()
+    {
+      session_destroy();
+      redirect(site_url()."/site");
     }
   }
 ?>
