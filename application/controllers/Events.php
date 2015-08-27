@@ -2,6 +2,7 @@
   //wag magbilang na parang rhythm sa cs or dev or kahit anong sciences econ, ie, math, business
   // mag bilang na parang math and cs
   //never gumawa na basta basta lang
+  //wag gawin ng basta basta
   class Events extends CI_Controller
   {
     private $today;
@@ -58,6 +59,7 @@
         "show_next_prev" => TRUE,
         "next_prev_url" => site_url()."/site/user_page",
         "template" => $this->template,
+        "day_type" => "long",
       );
       $this->load->library("calendar",$this->cal_prefs);
       $this->today = new DateTime();
@@ -93,12 +95,13 @@
           if($succeeded)
           {
             $data["message"] = "Event Successfully Added";
+            $user_monthly_events = $this->event->get_event_by_month($now->format("Y-m"),$this->session->email);
+            $data["events"] = $user_monthly_events["events"];
           }
           else
           {
-            $data["message"] = "Message added unsuccessfully";
+            $data["message"] = "Event Unuccessfully added";
           }
-          $data["events"] = $this->event->get_event_by_month($now->format("Y-m"),$this->session->email);
           load_view($data);
         }
         else
@@ -225,6 +228,7 @@
       $term = trim($this->input->post("search-term"));
       $data["main_content"] = "main_pages/event_pages/search_event";
       $data["page_title"] = "Search Event";
+      $data["has_results"] = 0;
       if(strlen($term) > 0)
       {
         $data["result"] = array(
@@ -233,15 +237,23 @@
           "date" => "",
         );
         $result = $this->event->search_event($term);
-        foreach($result as $key => $value)
+        if($result != NULL)
         {
-          $data["result"][$key] = $data["result"][$key]."<dl>";
-          foreach($value as $event)
+          foreach($result as $key => $value)
           {
-            $data["result"][$key] = $data["result"][$key]."<div style='margin-top:2%;'><dt>Name: </dt>"."<dd>".$event->name."</dd><dt>Date: </dt>".
-            "<dd>".$event->date."</dd><dt>Description: </dt><dd>".$event->description."</dd></div>";
+            $data["result"][$key] = $data["result"][$key]."<dl>";
+            foreach($value as $event)
+            {
+              $data["result"][$key] = $data["result"][$key]."<div style='margin-top:2%;'><dt>Name: </dt>"."<dd>".$event->name."</dd><dt>Date: </dt>".
+              "<dd>".$event->date."</dd><dt>Description: </dt><dd>".$event->description."</dd></div>";
+            }
+            $data["result"][$key] = $data["result"][$key]."</dl>";
           }
-          $data["result"][$key] = $data["result"][$key]."</dl>";
+          $data["has_results"] = 1;
+        }
+        else
+        {
+          $data["result"] = "No events matched the query";
         }
         load_view($data);
       }
@@ -256,6 +268,6 @@
     {
     }
 
-    
+
   }
 ?>

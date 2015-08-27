@@ -2,10 +2,13 @@
   class Event extends CI_Model
   {
     //gamitan ng algo sa susunod
+    // wag gawin ng basta basta. keep the algo simple and easy to maintain and read
+    // plan return values and formats before doing dev and architecture (implementation)
     private $table_name = "Scheduler_Event";
     function __construct()
     {
       parent::__construct();
+      $this->load->library('email');
     }
 
     function get_event_by_month($date,$email)
@@ -34,6 +37,45 @@
         $output["success"] = FALSE;
       }
       return $output;
+    }
+
+
+    /*
+      Get users with events today
+    */
+    function get_users_with_events($date)
+    {
+      $users_with_events = $this->db->select("email")->distinct("email")->where("date",$date)->get($this->table_name);
+      if($users_with_events->num_rows() > 0)
+      {
+        return $users_with_events->result();
+      }
+      else
+      {
+        return NULL;
+      }
+    }
+
+    /*
+      Get events by user on given date $params = array ("email" and "date")
+    */
+    function get_user_events_on($email, $date)
+    {
+      $params = array(
+        "email" => $email,
+        "date" => $date,
+      );
+      $user_events = $this->db->select("name")->get_where($this->table_name,$params);
+      
+      if($user_events->num_rows() > 0)
+      {
+
+        return $user_events->result();
+      }
+      else
+      {
+        return NULL;
+      }
     }
 
     function get_event($id)

@@ -68,30 +68,13 @@
 
     function send_verification_email($email,$verification_text)
     {
-      $this->db->where("verification_code",$verification_text)->update("Scheduler_User",array("user_status" => "U"));
-
-      $config = array(
-        'protocol' => 'smtp',
-        'smtp_host' => 'ssl://smtp.gmail.com',
-        'smtp_port' => 465,
-        'smtp_user' => 'patrick.chiuco',
-        'smtp_pass' => 'Habea$.091190',
-      );
-
-
       $verification_link = site_url()."/site/verify/".$verification_text;
-
-
       $this->load->library('email');
-      $this->email->initialize($config);
       $this->email->set_newline("\r\n");
       $this->email->from("admin@personalscheduler.com","Jacob");
       $this->email->to($email);
       $this->email->subject("Email Verification");
-      $this->email->message('Please click the following URL to verify:\n\n'.$verification_link);
-
-
-
+      $this->email->message("Please click the following URL to verify:\n\n".$verification_link);
 
       if($this->email->send())
       {
@@ -99,15 +82,13 @@
       }
       else
       {
-        show_error($this->email->print_debugger());
-        die();
         return FALSE;
       }
     }
 
     function verify_email_address($verification_code)
     {
-      $result = $this->db->where("verification_code",$verification_code)->update("Scheduler_User",array("user_status" => "V"));
+      $result = $this->db->where("verification_code",$verification_code)->update("Scheduler_User",array("verified" => 1));
       return $result;
     }
   }

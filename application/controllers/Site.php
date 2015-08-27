@@ -1,5 +1,7 @@
 <?php
   //plan implementation next time (avoid brute force)
+  // lagyan ng crazy test cases
+  // follow best practices
   class Site extends CI_Controller
   {
     private $template;
@@ -57,9 +59,16 @@
 
     function index()
     {
-      $data["main_content"] = "main_pages/login";
-      $data["page_title"] = "Login Page";
-      $this->load->view("common_views/base",$data);
+      if($this->session->email != NULL)
+      {
+        redirect(site_url()."/site/user_page");
+      }
+      else
+      {
+        $data["main_content"] = "main_pages/login";
+        $data["page_title"] = "Login Page";
+        $this->load->view("common_views/base",$data);
+      }
     }
 
     function login()
@@ -112,6 +121,7 @@
         "show_next_prev" => TRUE,
         "next_prev_url" => site_url()."/site/user_page",
         "template" => $this->template,
+        "day_type" => "long",
       );
       $this->load->library("calendar", $prefs);
       if($this->uri->segment(3) !== NULL)
@@ -134,7 +144,6 @@
         "page_title" => "User Dashboard",
         "events" => $rows["events"],
       );
-
       load_view($data);
     }
 
@@ -154,6 +163,7 @@
     function register()
     {
       $data["page_title"] = "Registration Page";
+      $data["wants_email"] = 1;
       if($_SERVER["REQUEST_METHOD"] == "POST")
       {
         $this->form_validation->set_rules("email","email:","required|valid_email|trim");
@@ -162,6 +172,7 @@
         $this->form_validation->set_rules("mname","middle name: ","required|trim");
         $this->form_validation->set_rules("lname", "last name: ","required|trim");
         $this->form_validation->set_rules("email_notif", "email notification: ","required");
+        $data["wants_email"] = ($this->input->post("email_notif") == "Yes") ? 1 : 0;
         if($this->form_validation->run())
         {
           $email = $this->input->post("email");
@@ -181,7 +192,7 @@
                 "mname" => $this->input->post('mname'),
                 "lname" => $this->input->post('lname'),
                 "email_notif" => ($this->input->post('email_notif') == "Yes") ? 1: 0,
-                "user_status" => 0,
+                "verified" => 0,
                 "verification_code" => md5($this->input->post('email')),
             );
             $has_created = $this->user->create_user($user_data);

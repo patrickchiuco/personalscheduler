@@ -7,13 +7,13 @@
       <div class="form-group">
         <?php echo form_label("Email: ","email",array("class" => "form-label col-xs-3 col-md-1")); ?>
         <div class="col-xs-9 col-md-11">
-          <?php echo form_input("email",set_value("email"),"class='form-control' id='email'")."<br/>"; ?>
+          <?php echo form_input("email",set_value("email"),"class='form-control' id='email' placeholder='john.doe@domain.com' title='The email you used to log in to the site.' ")."<br/>"; ?>
         </div>
       </div>
       <div class="form-group">
         <?php echo form_label("Password: ","password",array("class" => "form-label col-xs-3 col-md-1")); ?>
         <div class='col-xs-9 col-md-11'>
-          <?php echo form_password("password",set_value("password"),"class='form-control' id='password'")."<br/>"; ?>
+          <?php echo form_password("password",set_value("password"),"class='form-control' id='password' placeholder='********' title='Your password.' ")."<br/>"; ?>
         </div>
       </div>
       <div class="form-group">

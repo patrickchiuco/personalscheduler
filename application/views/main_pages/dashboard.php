@@ -13,7 +13,7 @@
           </div>
       </form>
   </div>
-  <?php  echo $this->calendar->generate($this->uri->segment(3),$this->uri->segment(4),$events); ?>
+  <?php echo $this->calendar->generate($this->uri->segment(3),$this->uri->segment(4),$events); ?>
   <a href="<?php echo site_url().'/events/add_event'?>">
     <button type="button" class="btn btn-primary">Add Event</button>
   </a>
