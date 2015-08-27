@@ -5,21 +5,25 @@
   */
   class Cron_digest extends CI_Controller
   {
+    private $today;
     function __construct()
     {
       parent::__construct();
       $this->load->model("Event","event");
+      date_default_timezone_set("Asia/Manila");
+      $this->today = new DateTime();
     }
 
     public function index()
     {
+      $this->send_digest($this->today->format("Y-m-d"));
     }
-
     public function send_digest($date)
     {
+
       if($this->input->is_cli_request())
       {
-
+        //$date = $this->today->format("Y-m-d");
         $users_with_events = $this->event->get_users_with_events($date);
         if($users_with_events != NULL)
         {
@@ -50,11 +54,13 @@
               $message = "Digest failed to be sent.".PHP_EOL;
             }
             echo $message;
+            return;
           }
         }
         else
         {
           echo "There are no users with events today.".PHP_EOL;
+          return;
         }
       }
       else

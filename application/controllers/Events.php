@@ -11,6 +11,7 @@
     function __construct()
     {
       parent::__construct();
+      date_default_timezone_set("Asia/Manila");
       $this->load->model("event");
       $this->template = '{table_open}<table border="0" cellpadding="0" cellspacing="0" class="table table-bordered">{/table_open}
 
@@ -69,6 +70,11 @@
     {
       echo "Hello";
 
+    }
+
+    function hello()
+    {
+      echo "hello events";
     }
 
     function add_event()

@@ -75,13 +75,13 @@ $query_builder = TRUE;
 
 $db['default'] = array(
 	'dsn'	=> '',
-	'hostname' => 'localhost',
+	'hostname' => '/Applications/MAMP/tmp/mysql/mysql.sock',//'localhost',
 	'username' => 'scheduleradmin',
 	'password' => 'password',
 	'database' => 'personal_scheduler',
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',
-	'pconnect' => FALSE,
+	'pconnect' => TRUE,//FALSE,
 	'db_debug' => (ENVIRONMENT !== 'production'),
 	'cache_on' => FALSE,
 	'cachedir' => '',
@@ -92,5 +92,25 @@ $db['default'] = array(
 	'compress' => FALSE,
 	'stricton' => FALSE,
 	'failover' => array(),
-	'save_queries' => TRUE
+	'save_queries' => TRUE,
 );
+
+
+
+/*echo '<pre>';
+  print_r($db['default']);
+  echo '</pre>';
+
+  echo 'Connecting to database: ' .$db['default']['database'];
+  $dbh=mysqli_connect
+  (
+    $db['default']['hostname'],
+    $db['default']['username'],
+    $db['default']['password'],
+		$db['default']['database'])
+    or die('Cannot connect to the database because: ' . mysqli_error($dbh));
+    mysql_select_db ($db['default']['database']);
+
+    echo '<br />   Connected OK:'  ;
+    die( 'file: ' .__FILE__ . ' Line: ' .__LINE__."\n");
+*/

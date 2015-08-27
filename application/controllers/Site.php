@@ -11,6 +11,7 @@
       parent::__construct();
       $this->load->model("User","user");
       $this->load->model("Event","event");
+      date_default_timezone_set("Asia/Manila");
       $this->today = new DateTime();
       $this->template = '{table_open}<table border="0" cellpadding="0" cellspacing="0" class="table table-bordered">{/table_open}
 

@@ -66,7 +66,7 @@
         "date" => $date,
       );
       $user_events = $this->db->select("name")->get_where($this->table_name,$params);
-      
+
       if($user_events->num_rows() > 0)
       {
 
