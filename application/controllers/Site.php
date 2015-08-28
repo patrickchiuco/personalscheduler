@@ -2,6 +2,10 @@
   //plan implementation next time (avoid brute force)
   // lagyan ng crazy test cases
   // follow best practices
+  // never hold back maalala wag kontrolin maalala
+  // never hold back maalala ang alam ko
+  // never hold back maalala ang up
+  // ok lang maalala ang alam
   class Site extends CI_Controller
   {
     private $template;
@@ -116,6 +120,7 @@
       }
 
     }
+
     function user_page()
     {
       $prefs = array(
@@ -145,6 +150,7 @@
         "page_title" => "User Dashboard",
         "events" => $rows["events"],
       );
+      
       load_view($data);
     }
 
@@ -155,7 +161,7 @@
       {
         $date = $this->today->format("Y-m");
       }
-      $events = $this->event->get_event_by_month($date,$this->session->email);
+      $events = $this->event->get_event_by_month($this->session->email,$date);
       return $events;
     }
     /*

@@ -3,15 +3,28 @@
   // mag bilang na parang math and cs
   //never gumawa na basta basta lang
   //wag gawin ng basta basta
+  /*
+    wag baliktarin ang sarili para hindi mabwisit
+    tanggalin ang abnormal kaguluhan
+    ayusin sobrang gulo (2x). linisin sobrang dumi.
+  */
   class Events extends CI_Controller
   {
     private $today;
     private $cal_prefs;
     private $template;
+    private $upload_config;
     function __construct()
     {
       parent::__construct();
       date_default_timezone_set("Asia/Manila");
+      $this->upload_config = array(
+        'upload_path' => './uploads/',
+        'allowed_types' => 'gif|jpg|jpeg|png',
+        'max_size' => '10000',
+        'max_width' => '5000',
+        'max_height' => '3000',
+      );
       $this->load->model("event");
       $this->template = '{table_open}<table border="0" cellpadding="0" cellspacing="0" class="table table-bordered">{/table_open}
 
@@ -68,13 +81,14 @@
     }
     function index()
     {
-      echo "Hello";
-
+      $data["main_content"] = "upload_view";
+      $data["page_title"] = "Upload Test";
+      load_view($data);
     }
 
     function hello()
     {
-      echo "hello events";
+
     }
 
     function add_event()
@@ -85,30 +99,53 @@
         $this->form_validation->set_rules("event_name","event name","required|trim");
         $this->form_validation->set_rules("event_desc","event description","required|trim");
         $this->form_validation->set_rules("event_date", "event date","required|trim|regex_match[/\d{4}\-\d{2}\-\d{2}/]");
-        //TODO: Add event date
         if($this->form_validation->run())
         {
-          $now = new DateTime();
           $user_data = array(
               "name" => $this->input->post("event_name"),
               "description" => $this->input->post("event_desc"),
               "date" => $this->input->post("event_date"),
               "email" => $this->session->email,
           );
-          $succeeded = $this->event->add_event_to_db($user_data);
-          $data["page_title"] = "User Dashboard";
-          $data["main_content"] = "main_pages/dashboard";
-          if($succeeded)
+          $upload_successful = $this->upload_file();
+          if($upload_successful["successful"])
           {
-            $data["message"] = "Event Successfully Added";
-            $user_monthly_events = $this->event->get_event_by_month($now->format("Y-m"),$this->session->email);
-            $data["events"] = $user_monthly_events["events"];
+            $result = $this->event->add_event_to_db($user_data);
+            $data["page_title"] = "User Dashboard";
+            $data["main_content"] = "main_pages/dashboard";
+            if($result !== NULL)
+            {
+              //add to scheduler_event_has
+              $now = new DateTime();
+              $added = $this->event->insert_to_event_has($result,$upload_successful["file_id"]);
+              if($added)
+              {
+                $data["message"] = "Event Successfully Added";
+                $user_monthly_events = $this->event->get_event_by_month($this->session->email,$now->format("Y-m"));
+                $data["events"] = $user_monthly_events["events"];
+                $data['email'] = $this->session->email;
+              }
+              else
+              {
+                $data["message"] = "Adding event failed.";
+              }
+              load_view($data);
+            }
+            else
+            {
+              $data["message"] = "Event not added to db";
+              $data["main_content"] = "main_pages/event_pages/add_event";
+              $data["hidden"] = array("user_email" => $this->session->email);
+              load_view($data);
+            }
           }
           else
           {
-            $data["message"] = "Event Unuccessfully added";
+            $data["message"] = "File failed to uplaod";
+            $data["main_content"] = "main_pages/event_pages/add_event";
+            $data["hidden"] = array("user_email" => $this->session->email);
+            load_view($data);
           }
-          load_view($data);
         }
         else
         {
@@ -123,7 +160,6 @@
         $data["hidden"] = array("user_email" => $this->session->email);
         load_view($data);
       }
-
     }
 
 
@@ -272,8 +308,71 @@
 
     function upload_file()
     {
+      $this->load->library("upload",$this->upload_config);
+      $output = array();
+      if($this->upload->do_upload())
+      {
+        $fInfo = $this->upload->data();
+        $has_resized = $this->_create_thumbnail($fInfo['file_name']);
+        if($has_resized)
+        {
+          $result = $this->event->add_file($fInfo);
+          if($result !== NULL)
+          {
+            $output["message"] = "Upload and thumbnail success. File added to DB.";
+            $output["raw_name"] = $fInfo["raw_name"];
+            $output["file_path"] = $fInfo["file_path"];
+            $output["full_path"] = $fInfo["full_path"];
+            $output["file_id"] = $result;
+            $output["successful"] = TRUE;
+            //add to scheduler_event_has
+          }
+          else
+          {
+            $output["message"] = "Upload and thumbnail success. File not added to DB.";
+            $output["successful"] = FALSE;
+          }
+          return $output;
+        }
+        else
+        {
+          $output["message"] = "Upload successful, thumbnail unsuccessful";
+          $output["successful"] = FALSE;
+        }
+        return $output;
+        //$data['uploadInfo'] = $fInfo;
+        //$data['thumbnail_name'] = $fInfo['raw_name'].'_thumb'.$fInfo['file_ext'];
+        //$data["main_content"] = 'upload_success';
+        //load_view($data);
+      }else{
+        $output["message"] = "Failed to upload file";
+        $output["successful"] = FALSE;
+        return $output;
+        //echo $this->upload->display_errors();
+      }
     }
 
+    function _create_thumbnail($fileName)
+    {
+      $config['image_library'] = 'gd2';
+      $config['source_image'] = 'uploads/'.$fileName;
+      $config['create_thumb'] = TRUE;
+      $config['maintain_ratio'] = TRUE;
+      $config['width'] = 75;
+      $config['height'] = 75;
 
+      $this->load->library('image_lib', $config);
+
+      //Check if thumbnail was created successfully. If not display errors.
+      if($this->image_lib->resize())
+      {
+        return TRUE;
+      }
+      else
+      {
+        return FALSE;
+        //$this->image_lib->display_errors();
+      }
+    }
   }
 ?>

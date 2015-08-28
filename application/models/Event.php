@@ -4,6 +4,11 @@
     //gamitan ng algo sa susunod
     // wag gawin ng basta basta. keep the algo simple and easy to maintain and read
     // plan return values and formats before doing dev and architecture (implementation)
+    // tagalugin na parang UP
+    /*
+      Ilagay ang table names sa mga variables para madaling ibahin
+      I check kung tama ang database
+    */
     private $table_name = "Scheduler_Event";
     function __construct()
     {
@@ -11,23 +16,35 @@
       $this->load->library('email');
     }
 
-    function get_event_by_month($date,$email)
+    function get_event_by_month($email,$date)
     {
-      $result = $this->db->distinct('date')->like('date',$date)->get_where($this->table_name,array("email" => $email));
+      $result = $this->db->distinct()->like('date',$date)->get_where($this->table_name,array("email" => $email));
+
+      //die();
       $events = array();
-      foreach($result->result() as $row)
-      {
-        $events_by_day = $this->db->select("eid, name")->where("date",$row->date)->get($this->table_name,array("email"=>$email));
-        $key = substr($row->date,8,2);
-        $events[$key] = '<ul class="event-list">';
-        foreach($events_by_day->result() as $event)
-        {
-          $events[$key] = $events[$key]."<li><a href='".site_url()."/events/view_event/".$event->eid."'>".$event->name."</a></li>";
-        }
-        $events[$key] = $events[$key]."</ul>";
-      }
+
       if($result->num_rows() > 0)
       {
+        foreach($result->result() as $row)
+        {
+          //$events_by_day = $this->db->select("eid, name")->where("date",$row->date)->get($this->table_name,array("email"=>$email));
+          $key = intval(substr($row->date,8,2));
+          $events[$key] = '<ul class="event-list">';
+          //$key = $day."";
+        }
+        foreach($result->result() as $row)
+        {
+          //$events_by_day = $this->db->select("eid, name")->where("date",$row->date)->get($this->table_name,array("email"=>$email));
+          $events[$key] = $events[$key]."<li><a href='".site_url()."/events/view_event/".$row->eid."'>".$row->name."</a></li>";
+          //$key = $day."";
+        }
+        foreach($result->result() as $row)
+        {
+          //$events_by_day = $this->db->select("eid, name")->where("date",$row->date)->get($this->table_name,array("email"=>$email));
+          $events[$key] = $events[$key]."</ul>";
+          //$key = $day."";
+        }
+
         $output["events"] = $events;
         $output["success"] = TRUE;
       }
@@ -93,28 +110,88 @@
 
     function add_event_to_db($data)
     {
-      $result = $this->db->insert($this->table_name,$data);
-      return $result;
+      $added = $this->db->insert($this->table_name,$data);
+      if($added)
+      {
+        return $this->db->insert_id();
+      }
+      else
+      {
+        return NULL;
+      }
     }
 
 
     function edit_event_details($id, $updated_details)
     {
-      if(isset($updated_details))
-      {
-          $this->db->where("eid",$id)->update($this->table_name,$updated_details);
-          return TRUE;
-      }
-      else
-      {
-        return FALSE;
-      }
+          $result = $this->db->where("eid",$id)->update($this->table_name,$updated_details);
+          return $result;
     }
 
     function delete_event($id)
     {
-      $result = $this->db->delete($this->table_name,array("eid" => $id));
-      return $result;
+      $this->load->helper("file");
+      $files = $this->db->select("file_id")->get_where("Scheduler_Event_Has", array("eid" => $id));
+      $deleted_assoc = $this->db->where("eid", $id)->delete("Scheduler_Event_Has");
+      $output = array();
+      if($deleted_assoc)
+      {
+        $deleted_events = $this->db->where("eid",$id)->delete($this->table_name);
+        if($deleted_events)
+        {
+          foreach($files->result() as $file)
+          {
+            $curr_file = $this->db->select("*")->get_where("Scheduler_File",array("file_id" => $file->file_id))->result();
+            $orig_file = $this->config->item("UPLOADS")."/".$curr_file[0]->file_name;
+            $thumb = $this->config->item("UPLOADS")."/".$curr_file[0]->thumb_name;
+
+            if(unlink($orig_file))
+            {
+              if(unlink($thumb))
+              {
+                $deleted_file = $this->db->where("file_id", $file->file_id)->delete("Scheduler_File");
+                if($deleted_file)
+                {
+                  $output["message"] = "Deletion successful";
+                  $output["success"] = TRUE;
+                }
+                else
+                {
+                  $output["message"] = "File not deleted";
+                  $output["success"] = FALSE;
+                  return $output;
+                }
+
+              }
+              else
+              {
+                $output["message"] = "Thumbnail was not deleted";
+                $output["success"] = FALSE;
+                return $output;
+              }
+            }
+            else
+            {
+              $output["message"] = "Original file was not deleted";
+              $output["success"] = FALSE;
+              return $output;
+            }
+          }
+        }
+        else
+        {
+          $output["message"] = "Event not deleted";
+          $output["success"] = FALSE;
+          return $ouput;
+        }
+      }
+      else
+      {
+        $output["message"] = "Assocs not deleted";
+        $output["success"] = FALSE;
+        return $output;
+      }
+
     }
 
     function search_event($term)
@@ -149,6 +226,34 @@
       else {
         return $result;
       }
+    }
+
+    function add_file($file_info)
+    {
+      $values = array(
+        "file_name" => $file_info["file_name"],
+        "thumb_name" => $file_info["raw_name"]."_thumb".$file_info["file_ext"],
+      );
+      $insert_success = $this->db->insert("Scheduler_File", $values);
+      if($insert_success)
+      {
+        return $this->db->insert_id();
+      }
+      else
+      {
+        return NULL;
+      }
+    }
+
+
+    function insert_to_event_has($eid, $file_id)
+    {
+      $values = array(
+        "eid" => $eid,
+        "file_id" => $file_id,
+      );
+      $insert_success = $this->db->insert("scheduler_Event_Has", $values);
+      return $insert_success;
     }
   }
 ?>

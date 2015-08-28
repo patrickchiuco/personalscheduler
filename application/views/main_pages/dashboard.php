@@ -2,6 +2,7 @@
   <h1 class="text-center"><?php echo $page_title; ?></h1>
 </div>
 <div class="container">
+  <h2>User: <?php echo $email;?></h2>
   <?php if(isset($message)){echo $message;}?>
   <div class="row">
       <?php echo form_open(site_url()."/events/search/");?>
