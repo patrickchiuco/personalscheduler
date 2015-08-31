@@ -15,7 +15,8 @@
     <div class="form-group">
       <?php echo form_label("Description: ","event_desc");?>
       <?php echo form_textarea("event_desc",set_value("event_desc"),'id="event_desc",rows="5",cols="40" placeholder="John Doe\'s House" class="form-control"')?>
-      <input type="file" name="userfile" size="20"/>
+      <?php echo form_label("Related Image(s) (use shift to select multiple): ","related_files");?>
+      <input type="file" multiple name="userfile[]" size="20" id="related_files"/>
     </div>
     <div class="form-group">
       <?php echo form_submit("add-event","Add Event",'class="btn btn-primary"');?>

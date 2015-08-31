@@ -96,6 +96,7 @@
                 "middle_name" => $auth_result["mname"],
                 "last_name" => $auth_result["lname"],
                 "email_notif" => $auth_result["email_notif"],
+                "is_logged_in" => 1,
               );
               $this->session->set_userdata($user_data);
               redirect("site/user_page");
@@ -123,37 +124,51 @@
 
     function user_page()
     {
-      $prefs = array(
-        "show_next_prev" => TRUE,
-        "next_prev_url" => site_url()."/site/user_page",
-        "template" => $this->template,
-        "day_type" => "long",
-      );
-      $this->load->library("calendar", $prefs);
-      if($this->uri->segment(3) !== NULL)
+      if($this->session->is_logged_in)
       {
-          $date_received = $this->uri->segment(3)."-".$this->uri->segment(4);
+        $prefs = array(
+          "show_next_prev" => TRUE,
+          "next_prev_url" => site_url()."/site/user_page",
+          "template" => $this->template,
+          "day_type" => "long",
+        );
+        $this->load->library("calendar", $prefs);
+        if($this->uri->segment(3) !== NULL)
+        {
+            $date_received = $this->uri->segment(3)."-".$this->uri->segment(4);
+        }
+        else
+        {
+            $date_received = $this->today->format("Y-m");
+        }
+
+        $rows = $this->create_content($date_received);
+        $data = array(
+          "fname" => $this->session->first_name,
+          "mname" => $this->session->middle_name,
+          "lname" => $this->session->last_name,
+          "email" => $this->session->email,
+          "email_notif" => $this->session->email_notif,
+          "main_content" => "main_pages/dashboard",
+          "page_title" => "User Dashboard",
+          "events" => $rows["events"],
+        );
+        //print_r($rows);
+        //die();
+        load_view($data);
       }
       else
       {
-          $date_received = $this->today->format("Y-m");
+        redirect(site_url()."/site/restricted");
       }
-
-      $rows = $this->create_content($date_received);
-      $data = array(
-        "fname" => $this->session->first_name,
-        "mname" => $this->session->middle_name,
-        "lname" => $this->session->last_name,
-        "email" => $this->session->email,
-        "email_notif" => $this->session->email_notif,
-        "main_content" => "main_pages/dashboard",
-        "page_title" => "User Dashboard",
-        "events" => $rows["events"],
-      );
-      
-      load_view($data);
     }
 
+    function restricted()
+    {
+      $data["main_content"] = "common_views/restricted_access";
+      $data["page_title"] = "Restricted Access";
+      load_view($data);
+    }
 
     function create_content($date)
     {
@@ -173,12 +188,12 @@
       $data["wants_email"] = 1;
       if($_SERVER["REQUEST_METHOD"] == "POST")
       {
-        $this->form_validation->set_rules("email","email:","required|valid_email|trim");
-        $this->form_validation->set_rules("password","password: ","required|min_length[8]|trim");
-        $this->form_validation->set_rules("fname","first name: ","required|trim");
-        $this->form_validation->set_rules("mname","middle name: ","required|trim");
-        $this->form_validation->set_rules("lname", "last name: ","required|trim");
-        $this->form_validation->set_rules("email_notif", "email notification: ","required");
+        $this->form_validation->set_rules("email","email","required|valid_email|trim");
+        $this->form_validation->set_rules("password","password ","required|min_length[8]|trim");
+        $this->form_validation->set_rules("fname","first name ","required|trim");
+        $this->form_validation->set_rules("mname","middle name ","required|trim");
+        $this->form_validation->set_rules("lname", "last name ","required|trim");
+        $this->form_validation->set_rules("email_notif", "email notification ","required");
         $data["wants_email"] = ($this->input->post("email_notif") == "Yes") ? 1 : 0;
         if($this->form_validation->run())
         {

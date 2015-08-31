@@ -7,6 +7,7 @@
     wag baliktarin ang sarili para hindi mabwisit
     tanggalin ang abnormal kaguluhan
     ayusin sobrang gulo (2x). linisin sobrang dumi.
+    ayusin i refactor ang code.f
   */
   class Events extends CI_Controller
   {
@@ -26,6 +27,14 @@
         'max_height' => '3000',
       );
       $this->load->model("event");
+      $resize_config = array(
+        'image_library' => 'gd2',
+        'create_thumb' => TRUE,
+        'maintain_ratio' => TRUE,
+        'width' => 75,
+        'height' => 75,
+      );
+      $this->load->library('image_lib', $resize_config);
       $this->template = '{table_open}<table border="0" cellpadding="0" cellspacing="0" class="table table-bordered">{/table_open}
 
         {heading_row_start}<tr>{/heading_row_start}
@@ -86,292 +95,504 @@
       load_view($data);
     }
 
-    function hello()
-    {
-
-    }
 
     function add_event()
     {
-      $data["page_title"] = "Add Event";
-      if($_SERVER["REQUEST_METHOD"] == "POST")
+      if($this->session->is_logged_in)
       {
-        $this->form_validation->set_rules("event_name","event name","required|trim");
-        $this->form_validation->set_rules("event_desc","event description","required|trim");
-        $this->form_validation->set_rules("event_date", "event date","required|trim|regex_match[/\d{4}\-\d{2}\-\d{2}/]");
-        if($this->form_validation->run())
+        $data["page_title"] = "Add Event";
+        if($_SERVER["REQUEST_METHOD"] == "POST")
         {
-          $user_data = array(
-              "name" => $this->input->post("event_name"),
-              "description" => $this->input->post("event_desc"),
-              "date" => $this->input->post("event_date"),
-              "email" => $this->session->email,
-          );
-          $upload_successful = $this->upload_file();
-          if($upload_successful["successful"])
+          $this->form_validation->set_rules("event_name","event name","required|trim");
+          $this->form_validation->set_rules("event_desc","event description","required|trim");
+          $this->form_validation->set_rules("event_date", "event date","required|trim|regex_match[/^\d{4}\-\d{2}\-\d{2}$/]");
+
+          if($this->form_validation->run())
           {
-            $result = $this->event->add_event_to_db($user_data);
-            $data["page_title"] = "User Dashboard";
-            $data["main_content"] = "main_pages/dashboard";
-            if($result !== NULL)
+            $date = $this->input->post("event_date");
+            $input_length = strlen($date);
+            if($input_length == 10)
             {
-              //add to scheduler_event_has
-              $now = new DateTime();
-              $added = $this->event->insert_to_event_has($result,$upload_successful["file_id"]);
-              if($added)
-              {
-                $data["message"] = "Event Successfully Added";
-                $user_monthly_events = $this->event->get_event_by_month($this->session->email,$now->format("Y-m"));
-                $data["events"] = $user_monthly_events["events"];
-                $data['email'] = $this->session->email;
-              }
-              else
-              {
-                $data["message"] = "Adding event failed.";
-              }
-              load_view($data);
+              $year = substr($date,0,4);
+              $month = substr($date,5,2);
+              $day = substr($date,8,2);
+              $is_valid_date = checkdate($month,$day,$year);
             }
             else
             {
-              $data["message"] = "Event not added to db";
+              $year = substr($date,0,4);
+              $month = substr($date,5,2);
+              $is_valid_date = checkdate($year,$month,"01");
+            }
+
+            if(!$is_valid_date)
+            {
+              $data["errors"] = "You entered an invalid date.";
               $data["main_content"] = "main_pages/event_pages/add_event";
               $data["hidden"] = array("user_email" => $this->session->email);
               load_view($data);
+              return;
             }
+
+            $user_data = array(
+                "name" => $this->input->post("event_name"),
+                "description" => $this->input->post("event_desc"),
+                "date" => $this->input->post("event_date"),
+                "email" => $this->session->email,
+            );
+
+            $result = $this->event->add_event_to_db($user_data);
+            $data["page_title"] = "User Dashboard";
+            $data["main_content"] = "main_pages/dashboard";
+            if($result === NULL)
+            {
+              $data["errors"] = "Event not added to db";
+              $data["main_content"] = "main_pages/event_pages/add_event";
+              $data["hidden"] = array("user_email" => $this->session->email);
+              load_view($data);
+              return;
+            }
+
+            if($_FILES["userfile"]["name"] !== "")
+            {
+              $upload_successful = $this->upload_file();
+
+              if($upload_successful["successful"])
+              {
+                //add to scheduler_event_has
+                $now = new DateTime();
+                foreach($upload_successful["file_ids"] as $file_id)
+                {
+                  $added = $this->event->insert_to_event_has($result,$file_id);
+                  if(!$added)
+                  {
+                    $data["errors"] = "Adding event failed.";
+                    load_view($data);
+                    return;
+                  }
+                }
+              }
+              else
+              {
+                $data["errors"] = $upload_successful["message"];
+                $data["main_content"] = "main_pages/event_pages/add_event";
+                $data["hidden"] = array("user_email" => $this->session->email);
+                load_view($data);
+                return;
+              }
+            }
+
           }
           else
           {
-            $data["message"] = "File failed to uplaod";
             $data["main_content"] = "main_pages/event_pages/add_event";
             $data["hidden"] = array("user_email" => $this->session->email);
             load_view($data);
+            return;
           }
+          $data["message"] = "Event Successfully Added";
+          $user_monthly_events = $this->event->get_event_by_month($this->session->email,$this->today->format("Y-m"));
+          $data["events"] = $user_monthly_events["events"];
+          $data['email'] = $this->session->email;
+          load_view($data);
         }
         else
         {
           $data["main_content"] = "main_pages/event_pages/add_event";
           $data["hidden"] = array("user_email" => $this->session->email);
           load_view($data);
+          return;
         }
       }
       else
       {
-        $data["main_content"] = "main_pages/event_pages/add_event";
-        $data["hidden"] = array("user_email" => $this->session->email);
-        load_view($data);
+        redirect(site_url()."/site/restricted");
       }
     }
 
 
     function view_event($id = NULL)
     {
-      $data = array(
-        "page_title" => "Event Details",
-        "main_content" => "main_pages/event_pages/view_event"
-      );
-      if($id)
+      if($this->session->is_logged_in)
       {
-        $event = $this->event->get_event($id)[0];
-        $data["eid"] = $event->eid;
-        $data["event_name"] = $event->name;
-        $data["event_desc"] = $event->description;
-        $data["event_date"] = $event->date;
-        load_view($data);
+        $data = array(
+          "page_title" => "Event Details",
+          "main_content" => "main_pages/event_pages/view_event"
+        );
+        if($id)
+        {
+          $event = $this->event->get_event($id)[0];
+          $thumbs = $this->get_event_images($id);
+          $data["eid"] = $event->eid;
+          $data["event_name"] = $event->name;
+          $data["event_desc"] = $event->description;
+          $data["event_date"] = $event->date;
+          $data["images"] = $thumbs;
+          load_view($data);
+        }
+        else
+        {
+          $data["errors"] = "Something went wrong. Contact administrator.";
+          load_view($data);
+        }
       }
       else
       {
-        $data["errors"] = "Something went wrong. Contact administrator.";
-        load_view($data);
+          redirect(site_url()."/site/restricted");
       }
+    }
+
+    /*
+      Move to model
+    */
+    function get_event_images($id)
+    {
+      $img_ids = $this->db->get_where("Scheduler_Event_Has",array("eid"=>$id));
+      $thumbs = array();
+      if($img_ids->num_rows() > 0)
+      {
+        foreach($img_ids->result() as $img_id)
+        {
+          $img_info = $this->db->select("thumb_name")->get_where("Scheduler_File",array("file_id" => $img_id->file_id));
+
+          if($img_info->num_rows() >0)
+          {
+            $thumbs[$img_id->file_id] = $img_info->result()[0]->thumb_name;
+          }
+        }
+        return $thumbs;
+      }
+      else
+      {
+        return NULL;
+      }
+
     }
 
     function delete_event($id , $confirm = 0)
     {
-      $data["main_content"] = "main_pages/event_pages/delete_event";
-      $data["confirm"] = $confirm;
-      $data["page_title"] = "Confirm delete";
-      if($confirm)
+      if($this->session->is_logged_in)
       {
-        $success = $this->event->delete_event($id);
-        if($success)
+        $data["main_content"] = "main_pages/event_pages/delete_event";
+        $data["confirm"] = $confirm;
+        $data["page_title"] = "Confirm delete";
+        if($confirm)
         {
-          $data["message"] = "Delete successful";
-        }
-        else
-        {
-          $data["message"] = "Delete unsuccessful";
-        }
-        load_view($data);
-      }
-      else
-      {
-        $data["eid"] = $id;
-        load_view($data);
-      }
-    }
-
-    function edit_event($id)
-    {
-      $data = array(
-        "page_title" => "Edit Event",
-        "main_content" => "main_pages/event_pages/edit_event",
-        "update_done" => FALSE,
-        "eid" => $id,
-      );
-      if($_SERVER["REQUEST_METHOD"] == "POST")
-      {
-        $this->form_validation->set_rules("ename","event name","required|trim");
-        $this->form_validation->set_rules("edesc","event description","required|trim");
-        $this->form_validation->set_rules("edate","event date","required|trim|regex_match[/\d{4}\-\d{2}\-\d{2}/]");
-        if($this->form_validation->run())
-        {
-          $data["update_done"] = TRUE;
-          $user_data = array(
-            "name" => $this->input->post("ename"),
-            "description" => $this->input->post("edesc"),
-            "date" => $this->input->post("edate"),
-          );
-          $result = $this->event->edit_event_details($id,$user_data);
-          if($result)
+          $success = $this->event->delete_event($id);
+          if($success)
           {
-            $data["message"] = "Updated successfully.";
+            $data["message"] = "Delete successful";
           }
           else
           {
-            $data["message"] = "Update failed.";
+            $data["message"] = "Delete unsuccessful";
           }
           load_view($data);
         }
         else
         {
           $data["eid"] = $id;
-          $data["ename"] = $this->input->post("ename");
-          $data["edesc"] = $this->input->post("edesc");
-          $data["edate"] = $this->input->post("edate");
           load_view($data);
         }
       }
       else
       {
-        $event = $this->event->get_event($id);
-        $data["eid"] = $event[0]->eid;
-        $data["ename"] = $event[0]->name;
-        $data["edesc"] = $event[0]->description;
-        $data["edate"] = $event[0]->date;
-        load_view($data);
+        redirect(site_url()."/site/restricted");
+      }
+    }
+
+    function edit_event($id)
+    {
+      if($this->session->is_logged_in)
+      {
+        $data = array(
+          "page_title" => "Edit Event",
+          "main_content" => "main_pages/event_pages/edit_event",
+          "update_done" => FALSE,
+          "eid" => $id,
+          "event_images" => $this->get_event_images($id),
+        );
+
+        if($_SERVER["REQUEST_METHOD"] == "POST")
+        {
+          $this->form_validation->set_rules("ename","event name","required|trim");
+          $this->form_validation->set_rules("edesc","event description","required|trim");
+          $this->form_validation->set_rules("edate","event date","required|trim|regex_match[/^\d{4}\-\d{2}\-\d{2}$/]");
+          $imgs_to_delete = $this->input->post('related_img_del[]');
+          if($this->form_validation->run())
+          {
+            $data["update_done"] = TRUE;
+            $user_data = array(
+              "name" => $this->input->post("ename"),
+              "description" => $this->input->post("edesc"),
+              "date" => $this->input->post("edate"),
+            );
+
+            $date = $this->input->post("edate");
+            $input_length = strlen($date);
+
+            if($input_length == 10)
+            {
+              $year = substr($date,0,4);
+              $month = substr($date,5,2);
+              $day = substr($date,8,2);
+              $is_valid_date = checkdate($month,$day,$year);
+            }
+            else
+            {
+              $year = substr($date,0,4);
+              $month = substr($date,5,2);
+              $is_valid_date = checkdate($year,$month,"01");
+            }
+
+            if(!$is_valid_date)
+            {
+              $data["eid"] = $id;
+              $data["ename"] = $this->input->post("ename");
+              $data["edesc"] = $this->input->post("edesc");
+              $data["edate"] = $this->input->post("edate");
+              $data["errors"] = "You entered an invalid date.";
+              $data["update_done"] = FALSE;
+              //$data["main_content"] = "main_pages/event_pages/edit_event";
+              load_view($data);
+              return;
+            }
+
+            if($_FILES["userfile"]["name"] !== "")
+            {
+              $uploaded = $this->upload_file();
+              if($uploaded["successful"])
+              {
+                foreach($uploaded["file_ids"] as $file_id)
+                {
+                  $added_assoc = $this->event->add_to_event_has($id,$file_id);
+                  if(!$added_assoc)
+                  {
+                    $data["eid"] = $id;
+                    $data["ename"] = $this->input->post("ename");
+                    $data["edesc"] = $this->input->post("edesc");
+                    $data["edate"] = $this->input->post("edate");
+                    $data["message"] = "File cannot be associated.";
+                    load_view($data);
+                    return;
+                  }
+                }
+              }
+              else
+              {
+                $data["eid"] = $id;
+                $data["ename"] = $this->input->post("ename");
+                $data["edesc"] = $this->input->post("edesc");
+                $data["edate"] = $this->input->post("edate");
+                $data["errors"] = $uploaded["message"];
+                $data["update_done"] = FALSE;
+                load_view($data);
+                return;
+              }
+
+            }
+
+            if($imgs_to_delete !== NULL)
+            {
+              foreach($imgs_to_delete as $img)
+              {
+                $success = $this->event->delete_img($id,$img);
+                if(!$success)
+                {
+                  $data["eid"] = $id;
+                  $data["ename"] = $this->input->post("ename");
+                  $data["edesc"] = $this->input->post("edesc");
+                  $data["edate"] = $this->input->post("edate");
+                  $data["message"] = "Related file deletion failed.";
+                  load_view($data);
+                }
+              }
+            }
+
+
+            /*  else
+              {
+                $data["eid"] = $id;
+                $data["ename"] = $this->input->post("ename");
+                $data["edesc"] = $this->input->post("edesc");
+                $data["edate"] = $this->input->post("edate");
+                $data["message"] = $uploaded["message"];
+                load_view($data);
+                return;
+              }*/
+            $result = $this->event->edit_event_details($id,$user_data);
+            if($result)
+            {
+              $data["message"] = "Updated successfully.";
+            }
+            else
+            {
+              $data["message"] = "Update failed.";
+            }
+            load_view($data);
+          }
+          else
+          {
+            $data["eid"] = $id;
+            $data["ename"] = $this->input->post("ename");
+            $data["edesc"] = $this->input->post("edesc");
+            $data["edate"] = $this->input->post("edate");
+            load_view($data);
+            return;
+          }
+        }
+        else
+        {
+          $event = $this->event->get_event($id);
+          $data["eid"] = $event[0]->eid;
+          $data["ename"] = $event[0]->name;
+          $data["edesc"] = $event[0]->description;
+          $data["edate"] = $event[0]->date;
+          load_view($data);
+        }
+      }
+      else
+      {
+          redirect(site_url()."/site/restricted");
       }
     }
 
     function search()
     {
-      /*
-        TODO: Transfer ang formatting sa model
-      */
-      $term = trim($this->input->post("search-term"));
-      $data["main_content"] = "main_pages/event_pages/search_event";
-      $data["page_title"] = "Search Event";
-      $data["has_results"] = 0;
-      if(strlen($term) > 0)
+      if($this->session->is_logged_in)
       {
-        $data["result"] = array(
-          "name" => "",
-          "desc" => "",
-          "date" => "",
-        );
-        $result = $this->event->search_event($term);
-        if($result != NULL)
+        /*
+          TODO: Transfer ang formatting sa model
+        */
+        $term = trim($this->input->post("search-term"));
+        $data["main_content"] = "main_pages/event_pages/search_event";
+        $data["page_title"] = "Search Event";
+        $data["has_results"] = 0;
+        if(strlen($term) > 0)
         {
-          foreach($result as $key => $value)
+          $data["result"] = array(
+            //"name" => "",
+            //"desc" => "",
+            //"date" => "",
+          );
+          $result = $this->event->search_event($term);
+          //$data["result"] = array_merge($data["result"],$result);
+
+          if($result != NULL)
           {
-            $data["result"][$key] = $data["result"][$key]."<dl>";
-            foreach($value as $event)
+            /*foreach($result as $key => $value)
             {
-              $data["result"][$key] = $data["result"][$key]."<div style='margin-top:2%;'><dt>Name: </dt>"."<dd>".$event->name."</dd><dt>Date: </dt>".
-              "<dd>".$event->date."</dd><dt>Description: </dt><dd>".$event->description."</dd></div>";
-            }
-            $data["result"][$key] = $data["result"][$key]."</dl>";
+              $data["result"][$key] = $data["result"][$key]."<dl>";
+              foreach($value as $event)
+              {
+                $data["result"][$key] = $data["result"][$key]."<div style='margin-top:2%;'><dt>Name: </dt>"."<dd>".$event->name."</dd><dt>Date: </dt>".
+                "<dd>".$event->date."</dd><dt>Description: </dt><dd>".$event->description."</dd></div>";
+              }
+              $data["result"][$key] = $data["result"][$key]."</dl>";
+            }*/
+            $data["result"] = array_merge($data["result"],$result);
+            $data["has_results"] = 1;
           }
-          $data["has_results"] = 1;
+          else
+          {
+            $data["errors"] = "No events matched the query";
+            $data["has_results"] = 0;
+            load_view($data);
+            return;
+          }
+
+
         }
         else
         {
-          $data["result"] = "No events matched the query";
+          $data["message"] = "Please enter a search term.";
+          load_view($data);
         }
-        load_view($data);
       }
       else
       {
-        $data["message"] = "Please enter a search term.";
-        load_view($data);
+        redirect(site_url()."/site/restricted");
       }
+
     }
 
     function upload_file()
     {
       $this->load->library("upload",$this->upload_config);
+      $file_ids = array();
+      $files = $_FILES;
+      $count = count($_FILES["userfile"]["name"]);
       $output = array();
-      if($this->upload->do_upload())
+      for($i = 0; $i < $count; $i++)
       {
-        $fInfo = $this->upload->data();
-        $has_resized = $this->_create_thumbnail($fInfo['file_name']);
-        if($has_resized)
+        $_FILES['userfile']['name'] = $files['userfile']['name'][$i];
+        $_FILES['userfile']['type'] = $files['userfile']['type'][$i];
+        $_FILES['userfile']['tmp_name'] = $files['userfile']['tmp_name'][$i];
+        $_FILES['userfile']['error'] = $files['userfile']['error'][$i];
+        $_FILES['userfile']['size'] = $files['userfile']['size'][$i];
+
+        if($this->upload->do_upload())
         {
-          $result = $this->event->add_file($fInfo);
-          if($result !== NULL)
+          $fInfo = $this->upload->data();
+          $has_resized = $this->_create_thumbnail($fInfo['file_name']);
+
+          if($has_resized["success"])
           {
-            $output["message"] = "Upload and thumbnail success. File added to DB.";
-            $output["raw_name"] = $fInfo["raw_name"];
-            $output["file_path"] = $fInfo["file_path"];
-            $output["full_path"] = $fInfo["full_path"];
-            $output["file_id"] = $result;
-            $output["successful"] = TRUE;
-            //add to scheduler_event_has
+            $result = $this->event->add_file($fInfo);
+            if($result !== NULL)
+            {
+              //echo $result;
+              array_push($file_ids,$result);
+            }
+            else
+            {
+              $output["message"] = "Upload and thumbnail success. File not added to DB.";
+              $output["successful"] = FALSE;
+              return $output;
+            }
           }
-          else
+          /*else
           {
-            $output["message"] = "Upload and thumbnail success. File not added to DB.";
-            $output["successful"] = FALSE;
-          }
-          return $output;
+            //$output["message"] = $has_resized["message"];
+            //$output["successful"] = FALSE;
+            //return $output;
+          }*/
         }
         else
         {
-          $output["message"] = "Upload successful, thumbnail unsuccessful";
+          $output["message"] = $this->upload->display_errors();
+          //echo $output["message"];
           $output["successful"] = FALSE;
+          return $output;
         }
-        return $output;
-        //$data['uploadInfo'] = $fInfo;
-        //$data['thumbnail_name'] = $fInfo['raw_name'].'_thumb'.$fInfo['file_ext'];
-        //$data["main_content"] = 'upload_success';
-        //load_view($data);
-      }else{
-        $output["message"] = "Failed to upload file";
-        $output["successful"] = FALSE;
-        return $output;
-        //echo $this->upload->display_errors();
       }
+      $output["message"] = "Upload and thumbnail success. File added to DB.";
+      $output["file_ids"] = $file_ids;
+      $output["successful"] = TRUE;
+
+      return $output;
     }
 
     function _create_thumbnail($fileName)
     {
-      $config['image_library'] = 'gd2';
       $config['source_image'] = 'uploads/'.$fileName;
-      $config['create_thumb'] = TRUE;
-      $config['maintain_ratio'] = TRUE;
-      $config['width'] = 75;
-      $config['height'] = 75;
-
-      $this->load->library('image_lib', $config);
-
+      $this->image_lib->initialize($config);
+      $has_resized = $this->image_lib->resize();
+      $output = array();
+      //echo "File name: ".$fileName." has resized: ".$has_resized."<br/>";
       //Check if thumbnail was created successfully. If not display errors.
-      if($this->image_lib->resize())
+      if($has_resized)
       {
-        return TRUE;
+        $output["message"] = "thumb success";
+        $output["success"] = TRUE;
+        return $output;
       }
       else
       {
-        return FALSE;
-        //$this->image_lib->display_errors();
+        $output["message"] = $this->image_lib->display_errors();
+        $output["success"] = FALSE;
+        return $output;
+
       }
     }
   }

@@ -8,6 +8,7 @@
     /*
       Ilagay ang table names sa mga variables para madaling ibahin
       I check kung tama ang database
+      Ayusin ko lang
     */
     private $table_name = "Scheduler_Event";
     function __construct()
@@ -35,6 +36,7 @@
         foreach($result->result() as $row)
         {
           //$events_by_day = $this->db->select("eid, name")->where("date",$row->date)->get($this->table_name,array("email"=>$email));
+          $key = intval(substr($row->date,8,2));
           $events[$key] = $events[$key]."<li><a href='".site_url()."/events/view_event/".$row->eid."'>".$row->name."</a></li>";
           //$key = $day."";
         }
@@ -196,22 +198,19 @@
 
     function search_event($term)
     {
+      /*
       $match = array(
-        "date" => $term,
+        //"date" => $term,
         "description" => $term,
         "name" => $term,
-      );
+      );*/
       //$date_matches = $this->db->distinct("eid")->or_like($match)->get($this->table_name);
 
-      $date_matches = $this->db->like("date",$term)->get($this->table_name);
+      //$date_matches = $this->db->like("date",$term)->get($this->table_name);
       $desc_matches = $this->db->like("description",$term)->get($this->table_name);
       $name_matches = $this->db->like("name",$term)->get($this->table_name);
       $result = array();
-      if($date_matches->num_rows() > 0)
-      {
-        $result["date"] = $date_matches->result();
-      }
-      else if($desc_matches->num_rows() > 0)
+      if($desc_matches->num_rows() > 0)
       {
         $result["desc"] = $desc_matches->result();
       }
@@ -254,6 +253,44 @@
       );
       $insert_success = $this->db->insert("scheduler_Event_Has", $values);
       return $insert_success;
+    }
+
+    function delete_img($eid, $file_id)
+    {
+
+      $file = $this->db->select("file_name, thumb_name")->where("file_id",$file_id)->get("Scheduler_File")->result()[0];
+      $result = $this->db->where(array("eid" => $eid, "file_id" => $file_id))->delete("Scheduler_Event_Has");
+      $output = array();
+      if($result)
+      {
+        $file_deleted = $this->db->where("file_id",$file_id)->delete("Scheduler_File");
+        unlink($this->config->item("UPLOADS")."/".$file->file_name);
+        unlink($this->config->item("UPLOADS")."/".$file->thumb_name);
+        if($file_deleted)
+        {
+          $output["message"] = "Delete successful";
+          $output["success"] = TRUE;
+          return $output;
+        }
+        else
+        {
+          $output["message"] = "File not deleted.";
+          $output["success"] = FALSE;
+          return $output;
+        }
+      }
+      else
+      {
+        $output["message"] = "Assoc not deleted.";
+        $output["success"] = FALSE;
+        return $output;
+      }
+    }
+
+    function add_to_event_has($eid, $file_id)
+    {
+        $result = $this->db->insert("Scheduler_Event_Has",array("eid" => $eid, "file_id" => $file_id));
+        return $result;
     }
   }
 ?>
