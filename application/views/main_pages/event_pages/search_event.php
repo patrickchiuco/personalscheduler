@@ -1,6 +1,7 @@
-<div class="jumbotron">
+<div class="">
   <h1 class="text-center"><?php echo $page_title; ?></h1>
 </div>
+
 <?php if(isset($message)){echo $message;}?>
 <div class="container">
   <div class="row">

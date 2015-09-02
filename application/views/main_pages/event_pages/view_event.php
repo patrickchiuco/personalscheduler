@@ -1,10 +1,12 @@
 <main class="content">
+  <div class="jumbotron">
+    <h1 class="text-center">Event Details</h1>
+  </div>
   <div class="container">
-    <h2 class="text-center">Event Details</h2>
     <div class="has-errors">
       <?php if(isset($errors)){ echo $errors;}?>
     </div>
-    <dl>
+    <dl class="dl-horizontal">
       <dt>Name:</dt>
       <dd><?php echo $event_name; ?></dd>
       <dt>Description:</dt>
@@ -12,27 +14,56 @@
       <dt>Date:</dt>
       <dd><?php echo $event_date?></dd>
       <dt>Related Images: </dt>
-    <?php if(isset($images)):?>
       <dd>
-        <ul id="related_imgs">
-        <?php foreach($images as $key=>$value):?>
-          <li><label><?php echo $value.": ";?></label><img src="<?php echo base_url()."uploads/".$value;?>"></li>
-        <?php endforeach; ?>
-        </ul>
+        <?php if(isset($images)):?>
+
+            <table class="table table-responsive table-condensed table-bordered">
+              <tr>
+                <th>
+                  File name
+                </th>
+                <th>
+                  Image
+                </th>
+              </tr>
+            <ul id="related_imgs" class="list-unstyled">
+            <?php foreach($images as $key=>$value):?>
+              <tr>
+                <td class="text-center"><?php echo $value;?></td>
+                <td class="text-center"><img src="<?php echo base_url()."uploads/".$value;?>"></td>
+              </tr>
+            <?php endforeach; ?>
+            </table>
+          </dd>
+        <?php else: ?>
+          No related files.
+        <?php endif; ?>
       </dd>
-    <?php else: ?>
-      No related files.
-    <?php endif; ?>
     </dl>
-    <a href="<?php echo site_url()."/events/delete_event/".$eid?>">
-      <button type="button" class="btn btn-primary">Delete</button>
-    </a>
-    <a href="<?php echo site_url()."/events/edit_event/".$eid?>">
-      <button type="button" class="btn btn-primary">Edit</button>
-    </a>
-    <a href="<?php echo site_url()."/site/user_page"?>">
-      <button type="button" class="btn btn-primary">Back</button>
-    </a>
+    <div class="row">
+      <div class="col-sm-3">
+      </div>
+      <div class="col-sm-2">
+        <a href="<?php echo site_url()."/events/delete_event/".$eid?>">
+          <button type="button" class="btn btn-primary btn-block">Delete</button>
+        </a>
+      </div>
+      <div class="col-sm-2">
+        <a href="<?php echo site_url()."/events/edit_event/".$eid?>">
+          <button type="button" class="btn btn-primary btn-block">Edit</button>
+        </a>
+      </div>
+      <div class="col-sm-2">
+        <a href="<?php echo site_url()."/site/user_page"?>">
+          <button type="button" class="btn btn-primary btn-block">Back</button>
+        </a>
+      </div>
+      <div class="col-sm-3">
+      </div>
+    </div>
+
+
+
 
   </div>
 </main>

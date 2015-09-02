@@ -49,12 +49,14 @@
         else
         {
           $result["message"] = "Username/password did not match.";
+          $result["err_src"] = 'em';
           $result["is_authenticated"] = FALSE;
         }
       }
       else
       {
         $result["message"] = "User not found.";
+        $result["err_src"] = 'e';
         $result["is_authenticated"] = FALSE;
       }
       return $result;

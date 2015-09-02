@@ -7,3 +7,74 @@
 {
   margin-top: 1%;
 }
+
+.search-result
+{
+  margin-top: 2%;
+}
+
+#page-subtitle
+{
+  margin-bottom: 5%;
+}
+
+#contents
+{
+  position: relative;
+  top: 25px;
+}
+#main-div
+{
+  border: 2px solid #F7F7F7;
+  background-color: #F7F7F7;
+  padding:2%;
+}
+
+.rounded-corners-5
+{
+  -webkit-border-radius: 5px;
+  -moz-border-radius: 5px;
+  border-radius: 5px;
+}
+
+.other-link
+{
+  margin-top: 1%;
+}
+
+.app-banner
+{
+  height: 85px;
+  padding-top:5px;
+}
+.error
+{
+  color: #A94442;
+}
+
+.confirmation-messages
+{
+  margin: 5% 0;
+  font-size: 1.5em;
+}
+
+.navbar
+{
+  margin-bottom: 0;
+}
+
+.page-name
+{
+  margin: 4% 0;
+}
+
+.dashboard-nav
+{
+  margin: 0.5% 0;
+}
+
+
+.file-error
+{
+  color: #A94442;
+}

@@ -6,6 +6,11 @@
   // never hold back maalala ang alam ko
   // never hold back maalala ang up
   // ok lang maalala ang alam
+  /*
+    I-refactor ang code.
+    Ayusin ang mga magugulo. Planuhin ng mabuti before gawin.
+    Finish this para lang mag prototype at may mapakita.
+  */
   class Site extends CI_Controller
   {
     private $template;
@@ -17,7 +22,7 @@
       $this->load->model("Event","event");
       date_default_timezone_set("Asia/Manila");
       $this->today = new DateTime();
-      $this->template = '{table_open}<table border="0" cellpadding="0" cellspacing="0" class="table table-bordered">{/table_open}
+      $this->template = '{table_open}<table border="0" cellpadding="0" cellspacing="0" class="table table-bordered table-responsive">{/table_open}
 
         {heading_row_start}<tr>{/heading_row_start}
 
@@ -64,7 +69,7 @@
 
     function index()
     {
-      if($this->session->email != NULL)
+      if($this->session->is_logged_in)
       {
         redirect(site_url()."/site/user_page");
       }
@@ -81,8 +86,8 @@
       $data["page_title"] = "Log in Page";
       if($_SERVER["REQUEST_METHOD"] == "POST")
       {
-        $this->form_validation->set_rules("email","email: ","required|valid_email|trim");
-        $this->form_validation->set_rules("password","password: ","required|trim|min_length[8]");
+        $this->form_validation->set_rules("email","email ","required|valid_email|trim");
+        $this->form_validation->set_rules("password","password ","required|trim|min_length[8]");
         if($this->form_validation->run())
         {
             $input["email"] = $this->input->post("email");
@@ -93,7 +98,7 @@
               $user_data = array(
                 "email" => $input["email"],
                 "first_name" => $auth_result["fname"],
-                "middle_name" => $auth_result["mname"],
+                //"middle_name" => $auth_result["mname"],
                 "last_name" => $auth_result["lname"],
                 "email_notif" => $auth_result["email_notif"],
                 "is_logged_in" => 1,
@@ -105,6 +110,8 @@
             {
               $data["main_content"] = "main_pages/login";
               $data["errors"] = $auth_result["message"];
+              $data["err_src"] = $auth_result["err_src"];
+              $data["has_error"] = TRUE;
               $this->load->view("common_views/base",$data);
             }
         }
@@ -150,7 +157,7 @@
           "email" => $this->session->email,
           "email_notif" => $this->session->email_notif,
           "main_content" => "main_pages/dashboard",
-          "page_title" => "User Dashboard",
+          "page_title" => "Chronos - User Dashboard",
           "events" => $rows["events"],
         );
         //print_r($rows);
@@ -188,12 +195,13 @@
       $data["wants_email"] = 1;
       if($_SERVER["REQUEST_METHOD"] == "POST")
       {
-        $this->form_validation->set_rules("email","email","required|valid_email|trim");
+        $this->form_validation->set_rules("email","email","required|valid_email|trim|is_unique[Scheduler_User.email]",array("is_unique" => "This %s already exists."));
         $this->form_validation->set_rules("password","password ","required|min_length[8]|trim");
         $this->form_validation->set_rules("fname","first name ","required|trim");
-        $this->form_validation->set_rules("mname","middle name ","required|trim");
+        //$this->form_validation->set_rules("mname","middle name ","required|trim");
         $this->form_validation->set_rules("lname", "last name ","required|trim");
         $this->form_validation->set_rules("email_notif", "email notification ","required");
+        $this->form_validation->set_rules("con_password", "confirm password","required|matches[password]|trim");
         $data["wants_email"] = ($this->input->post("email_notif") == "Yes") ? 1 : 0;
         if($this->form_validation->run())
         {
@@ -211,7 +219,7 @@
                 "email" => $this->input->post('email'),
                 "password" => md5($this->input->post('password')),
                 "fname" => $this->input->post('fname'),
-                "mname" => $this->input->post('mname'),
+                //"mname" => $this->input->post('mname'),
                 "lname" => $this->input->post('lname'),
                 "email_notif" => ($this->input->post('email_notif') == "Yes") ? 1: 0,
                 "verified" => 0,
@@ -225,9 +233,9 @@
               {
                 $this->session->set_userdata("email",$user_data["email"]);
                 $this->session->set_userdata("fname",$user_data["fname"]);
-                $this->session->set_userdata("mname",$user_data["mname"]);
                 $this->session->set_userdata("lname",$user_data["lname"]);
                 $this->session->set_userdata("email_notif",$user_data["email_notif"]);
+                $this->session->set_userdata("is_logged_in",1);
                 redirect(base_url().'index.php/site/user_page');
               }
               else
@@ -272,7 +280,8 @@
         $error = array("error" => "Sorry unable to verify your email.");
       }
       $data["message"] = $error;
-      $this->load->view("confirmation_pages/verification",$data);
+      $data["main_content"] = "confirmation_pages/verification";
+      load_view($data);
     }
 
     function send_verification_email($email, $verification_text)

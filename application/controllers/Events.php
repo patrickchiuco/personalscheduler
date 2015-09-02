@@ -9,16 +9,21 @@
     ayusin sobrang gulo (2x). linisin sobrang dumi.
     ayusin i refactor ang code.f
   */
+  /*
+    TODO: Separate valid date checking into function.
+  */
   class Events extends CI_Controller
   {
     private $today;
     private $cal_prefs;
     private $template;
     private $upload_config;
+    private $valid_file_types;
     function __construct()
     {
       parent::__construct();
       date_default_timezone_set("Asia/Manila");
+      $this->valid_file_types = array("image/jpeg","image/pjpeg","image/png","image/gif");
       $this->upload_config = array(
         'upload_path' => './uploads/',
         'allowed_types' => 'gif|jpg|jpeg|png',
@@ -101,38 +106,19 @@
       if($this->session->is_logged_in)
       {
         $data["page_title"] = "Add Event";
+        $data["success"] = 0;
         if($_SERVER["REQUEST_METHOD"] == "POST")
         {
+
           $this->form_validation->set_rules("event_name","event name","required|trim");
           $this->form_validation->set_rules("event_desc","event description","required|trim");
-          $this->form_validation->set_rules("event_date", "event date","required|trim|regex_match[/^\d{4}\-\d{2}\-\d{2}$/]");
-
+          $this->form_validation->set_rules("event_date", "event date","required|trim|regex_match[/^\d{4}\-\d{2}\-\d{2}$/]|callback_is_gregorian");
+          $this->form_validation->set_rules("images[]", "user file ","callback_valid_file_type");
+          /*
+            TODO: check all errors before adding to db
+          */
           if($this->form_validation->run())
           {
-            $date = $this->input->post("event_date");
-            $input_length = strlen($date);
-            if($input_length == 10)
-            {
-              $year = substr($date,0,4);
-              $month = substr($date,5,2);
-              $day = substr($date,8,2);
-              $is_valid_date = checkdate($month,$day,$year);
-            }
-            else
-            {
-              $year = substr($date,0,4);
-              $month = substr($date,5,2);
-              $is_valid_date = checkdate($year,$month,"01");
-            }
-
-            if(!$is_valid_date)
-            {
-              $data["errors"] = "You entered an invalid date.";
-              $data["main_content"] = "main_pages/event_pages/add_event";
-              $data["hidden"] = array("user_email" => $this->session->email);
-              load_view($data);
-              return;
-            }
 
             $user_data = array(
                 "name" => $this->input->post("event_name"),
@@ -142,8 +128,10 @@
             );
 
             $result = $this->event->add_event_to_db($user_data);
-            $data["page_title"] = "User Dashboard";
-            $data["main_content"] = "main_pages/dashboard";
+            //$data["page_title"] = "User Dashboard";
+            //$data["main_content"] = "main_pages/dashboard";
+            $data["page_title"] = "Confirmation";
+            $data["main_content"] = "main_pages/event_pages/add_event";
             if($result === NULL)
             {
               $data["errors"] = "Event not added to db";
@@ -153,8 +141,10 @@
               return;
             }
 
-            if($_FILES["userfile"]["name"] !== "")
+            if($_FILES["images"]["name"][0] !== "")
             {
+              //print_r($_FILES);
+              //die();
               $upload_successful = $this->upload_file();
 
               if($upload_successful["successful"])
@@ -174,7 +164,7 @@
               }
               else
               {
-                $data["errors"] = $upload_successful["message"];
+                $data["file_errors"] = $upload_successful["message"];
                 $data["main_content"] = "main_pages/event_pages/add_event";
                 $data["hidden"] = array("user_email" => $this->session->email);
                 load_view($data);
@@ -190,10 +180,14 @@
             load_view($data);
             return;
           }
-          $data["message"] = "Event Successfully Added";
           $user_monthly_events = $this->event->get_event_by_month($this->session->email,$this->today->format("Y-m"));
+          $data["success"] = 1;
+          $data["curr_year"] = substr($this->input->post("event_date"),0,4);
+          $data["curr_month"] = substr($this->input->post("event_date"),5,2);
           $data["events"] = $user_monthly_events["events"];
           $data['email'] = $this->session->email;
+          //print_array($data);
+          //die();
           load_view($data);
         }
         else
@@ -276,6 +270,12 @@
         $data["main_content"] = "main_pages/event_pages/delete_event";
         $data["confirm"] = $confirm;
         $data["page_title"] = "Confirm delete";
+        $data["page_name"] = "Confirm Delete";
+        $data["eid"] = $id;
+        $curr_event = $this->event->get_event($id)[0];
+        $event_date = $curr_event->date;
+        $data["event_year"] = substr($event_date,0,4);
+        $data["event_month"] = substr($event_date,5,2);
         if($confirm)
         {
           $success = $this->event->delete_event($id);
@@ -317,7 +317,7 @@
         {
           $this->form_validation->set_rules("ename","event name","required|trim");
           $this->form_validation->set_rules("edesc","event description","required|trim");
-          $this->form_validation->set_rules("edate","event date","required|trim|regex_match[/^\d{4}\-\d{2}\-\d{2}$/]");
+          $this->form_validation->set_rules("edate","event date","required|trim|regex_match[/^\d{4}\-\d{2}\-\d{2}$/]|is_gregorian_callable");
           $imgs_to_delete = $this->input->post('related_img_del[]');
           if($this->form_validation->run())
           {
@@ -358,7 +358,7 @@
               return;
             }
 
-            if($_FILES["userfile"]["name"] !== "")
+            if($_FILES["images"]["name"][0] !== "")
             {
               $uploaded = $this->upload_file();
               if($uploaded["successful"])
@@ -521,18 +521,21 @@
       $this->load->library("upload",$this->upload_config);
       $file_ids = array();
       $files = $_FILES;
-      $count = count($_FILES["userfile"]["name"]);
+      $count = count($_FILES["images"]["name"]);
       $output = array();
+
       for($i = 0; $i < $count; $i++)
       {
-        $_FILES['userfile']['name'] = $files['userfile']['name'][$i];
-        $_FILES['userfile']['type'] = $files['userfile']['type'][$i];
-        $_FILES['userfile']['tmp_name'] = $files['userfile']['tmp_name'][$i];
-        $_FILES['userfile']['error'] = $files['userfile']['error'][$i];
-        $_FILES['userfile']['size'] = $files['userfile']['size'][$i];
+        $_FILES['images']['name'] = $files['images']['name'][$i];
+        $_FILES['images']['type'] = $files['images']['type'][$i];
+        $_FILES['images']['tmp_name'] = $files['images']['tmp_name'][$i];
+        $_FILES['images']['error'] = $files['images']['error'][$i];
+        $_FILES['images']['size'] = $files['images']['size'][$i];
 
-        if($this->upload->do_upload())
+
+        if($this->upload->do_upload("images"))
         {
+
           $fInfo = $this->upload->data();
           $has_resized = $this->_create_thumbnail($fInfo['file_name']);
 
@@ -561,6 +564,7 @@
         else
         {
           $output["message"] = $this->upload->display_errors();
+
           //echo $output["message"];
           $output["successful"] = FALSE;
           return $output;
@@ -595,5 +599,40 @@
 
       }
     }
+
+    function is_gregorian($date)
+    {
+
+      if(!is_gregorian_date($date))
+      {
+          $this->form_validation->set_message("is_gregorian","The {field} must be a date in the gregorian calendar.");
+          return FALSE;
+      }
+      else
+      {
+          return TRUE;
+      }
+    }
+
+    function valid_file_type($files)
+    {
+      if($_FILES["images"]["name"][0] === "")
+      {
+        return TRUE;
+      }
+      else
+      {
+        foreach($_FILES["images"]["type"] as $file_type)
+        {
+          if(!in_array($file_type,$this->valid_file_types))
+          {
+            $this->form_validation->set_message("valid_file_type","Uploaded an invalid file type. Valid file types are gif, jpg, jpeg and png.");
+            return FALSE;
+          }
+        }
+        return TRUE;
+      }
+    }
+
   }
 ?>
