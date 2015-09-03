@@ -16,7 +16,6 @@
       <dt>Related Images: </dt>
       <dd>
         <?php if(isset($images)):?>
-
             <table class="table table-responsive table-condensed table-bordered">
               <tr>
                 <th>

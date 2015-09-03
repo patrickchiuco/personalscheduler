@@ -54,7 +54,7 @@
         {week_day_cell}<td>{week_day}</td>{/week_day_cell}
         {week_row_end}</tr>{/week_row_end}
 
-        {cal_row_start}<tr>{/cal_row_start}
+        {cal_row_start}<tr class="cal-row-start">{/cal_row_start}
         {cal_cell_start}<td>{/cal_cell_start}
         {cal_cell_start_today}<td>{/cal_cell_start_today}
         {cal_cell_start_other}<td class="other-month">{/cal_cell_start_other}
@@ -317,7 +317,8 @@
         {
           $this->form_validation->set_rules("ename","event name","required|trim");
           $this->form_validation->set_rules("edesc","event description","required|trim");
-          $this->form_validation->set_rules("edate","event date","required|trim|regex_match[/^\d{4}\-\d{2}\-\d{2}$/]|is_gregorian_callable");
+          $this->form_validation->set_rules("edate","event date","required|trim|regex_match[/^\d{4}\-\d{2}\-\d{2}$/]|callback_is_gregorian");
+          $this->form_validation->set_rules("images[]","new images","callback_valid_file_type");
           $imgs_to_delete = $this->input->post('related_img_del[]');
           if($this->form_validation->run())
           {
@@ -470,28 +471,14 @@
         $data["has_results"] = 0;
         if(strlen($term) > 0)
         {
-          $data["result"] = array(
-            //"name" => "",
-            //"desc" => "",
-            //"date" => "",
-          );
+          $data["result"] = array();
           $result = $this->event->search_event($term);
-          //$data["result"] = array_merge($data["result"],$result);
-
           if($result != NULL)
           {
-            /*foreach($result as $key => $value)
-            {
-              $data["result"][$key] = $data["result"][$key]."<dl>";
-              foreach($value as $event)
-              {
-                $data["result"][$key] = $data["result"][$key]."<div style='margin-top:2%;'><dt>Name: </dt>"."<dd>".$event->name."</dd><dt>Date: </dt>".
-                "<dd>".$event->date."</dd><dt>Description: </dt><dd>".$event->description."</dd></div>";
-              }
-              $data["result"][$key] = $data["result"][$key]."</dl>";
-            }*/
             $data["result"] = array_merge($data["result"],$result);
             $data["has_results"] = 1;
+            load_view($data);
+            return;
           }
           else
           {
@@ -500,12 +487,10 @@
             load_view($data);
             return;
           }
-
-
         }
         else
         {
-          $data["message"] = "Please enter a search term.";
+          $data["errors"] = "Please enter a search term.";
           load_view($data);
         }
       }
@@ -513,7 +498,6 @@
       {
         redirect(site_url()."/site/restricted");
       }
-
     }
 
     function upload_file()

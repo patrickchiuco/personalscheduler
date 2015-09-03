@@ -30,7 +30,7 @@
         {
           //$events_by_day = $this->db->select("eid, name")->where("date",$row->date)->get($this->table_name,array("email"=>$email));
           $key = intval(substr($row->date,8,2));
-          $events[$key] = '<ul class="event-list">';
+          $events[$key] = '<ol class="event-list">';
           //$key = $day."";
         }
         foreach($result->result() as $row)
@@ -43,7 +43,7 @@
         foreach($result->result() as $row)
         {
           //$events_by_day = $this->db->select("eid, name")->where("date",$row->date)->get($this->table_name,array("email"=>$email));
-          $events[$key] = $events[$key]."</ul>";
+          $events[$key] = $events[$key]."</ol>";
           //$key = $day."";
         }
 
@@ -198,23 +198,14 @@
 
     function search_event($term)
     {
-      /*
-      $match = array(
-        //"date" => $term,
-        "description" => $term,
-        "name" => $term,
-      );*/
-      //$date_matches = $this->db->distinct("eid")->or_like($match)->get($this->table_name);
-
-      //$date_matches = $this->db->like("date",$term)->get($this->table_name);
-      $desc_matches = $this->db->like("description",$term)->get($this->table_name);
-      $name_matches = $this->db->like("name",$term)->get($this->table_name);
+      $desc_matches = $this->db->like("description",$term)->get_where($this->table_name,array("email" => $this->session->email));
+      $name_matches = $this->db->like("name",$term)->get_where($this->table_name,array("email" => $this->session->email));
       $result = array();
       if($desc_matches->num_rows() > 0)
       {
         $result["desc"] = $desc_matches->result();
       }
-      else if($name_matches->num_rows() > 0)
+      if($name_matches->num_rows() > 0)
       {
         $result["name"] = $name_matches->result();
       }

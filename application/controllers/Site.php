@@ -22,21 +22,21 @@
       $this->load->model("Event","event");
       date_default_timezone_set("Asia/Manila");
       $this->today = new DateTime();
-      $this->template = '{table_open}<table border="0" cellpadding="0" cellspacing="0" class="table table-bordered table-responsive">{/table_open}
+      $this->template = '{table_open}<table border="0" cellpadding="0" cellspacing="0" class="calendar table-responsive">{/table_open}
 
-        {heading_row_start}<tr>{/heading_row_start}
+        {heading_row_start}<tr class="heading-row-start">{/heading_row_start}
 
         {heading_previous_cell}<th><a href="{previous_url}">&lt;&lt;</a></th>{/heading_previous_cell}
-        {heading_title_cell}<th colspan="{colspan}">{heading}</th>{/heading_title_cell}
-        {heading_next_cell}<th><a href="{next_url}">&gt;&gt;</a></th>{/heading_next_cell}
+        {heading_title_cell}<th class="text-center" colspan="{colspan}">{heading}</th>{/heading_title_cell}
+        {heading_next_cell}<th class="text-right"><a href="{next_url}">&gt;&gt;</a></th>{/heading_next_cell}
 
         {heading_row_end}</tr>{/heading_row_end}
 
-        {week_row_start}<tr>{/week_row_start}
-        {week_day_cell}<td>{week_day}</td>{/week_day_cell}
+        {week_row_start}<tr class="week-row-start">{/week_row_start}
+        {week_day_cell}<td class="text-center">{week_day}</td>{/week_day_cell}
         {week_row_end}</tr>{/week_row_end}
 
-        {cal_row_start}<tr>{/cal_row_start}
+        {cal_row_start}<tr class="cal-row-start">{/cal_row_start}
         {cal_cell_start}<td>{/cal_cell_start}
         {cal_cell_start_today}<td>{/cal_cell_start_today}
         {cal_cell_start_other}<td class="other-month">{/cal_cell_start_other}
@@ -198,7 +198,6 @@
         $this->form_validation->set_rules("email","email","required|valid_email|trim|is_unique[Scheduler_User.email]",array("is_unique" => "This %s already exists."));
         $this->form_validation->set_rules("password","password ","required|min_length[8]|trim");
         $this->form_validation->set_rules("fname","first name ","required|trim");
-        //$this->form_validation->set_rules("mname","middle name ","required|trim");
         $this->form_validation->set_rules("lname", "last name ","required|trim");
         $this->form_validation->set_rules("email_notif", "email notification ","required");
         $this->form_validation->set_rules("con_password", "confirm password","required|matches[password]|trim");
@@ -219,7 +218,6 @@
                 "email" => $this->input->post('email'),
                 "password" => md5($this->input->post('password')),
                 "fname" => $this->input->post('fname'),
-                //"mname" => $this->input->post('mname'),
                 "lname" => $this->input->post('lname'),
                 "email_notif" => ($this->input->post('email_notif') == "Yes") ? 1: 0,
                 "verified" => 0,
@@ -303,6 +301,142 @@
     {
       session_destroy();
       redirect(site_url()."/site");
+    }
+
+    function user_profile()
+    {
+      if($this->session->is_logged_in)
+      {
+        $data["page_title"] = "User Profile";
+        $data["main_content"] = "main_pages/settings_views/user_profile";
+        if($_SERVER["REQUEST_METHOD"] === "POST")
+        {
+
+        }
+        else
+        {
+          $user_profile_values = $this->user->get_user_details()[0];
+          $data["fname"] = $user_profile_values->fname;
+          $data["lname"] = $user_profile_values->lname;
+          $data["email"] = $user_profile_values->email;
+          $data["email_notif"] = intval($user_profile_values->email_notif);
+          load_view($data);
+          return;
+        }
+      }
+      else
+      {
+          redirect(site_url()."/site/restricted");
+      }
+    }
+
+    function user_profile_edit()
+    {
+      if($this->session->is_logged_in)
+      {
+        $data["page_title"] = "User Profile";
+        $data["main_content"] = "main_pages/settings_views/user_profile_edit";
+        $data["db_accessed"] = FALSE;
+        if($_SERVER["REQUEST_METHOD"] === "POST")
+        {
+          $this->form_validation->set_rules("email","email","required|valid_email|trim|callback_is_valid_update",array("is_unique" => "This %s already exists."));
+          $this->form_validation->set_rules("fname","first name ","required|trim");
+          $this->form_validation->set_rules("lname", "last name ","required|trim");
+          $this->form_validation->set_rules("email_notif", "email notification ","required");
+          if($this->form_validation->run())
+          {
+            $updates = array(
+              "email" => $this->input->post("email"),
+              "fname" => $this->input->post("fname"),
+              "lname" => $this->input->post("lname"),
+              "email_notif" => $this->input->post("email_notif"),
+            );
+
+            $profile_updated = $this->user->update_user_profile($updates);
+            $data["db_accessed"] = TRUE;
+            if($profile_updated)
+            {
+              $data["updated"] = TRUE;
+            }
+            else
+            {
+              $data["updated"] = FALSE;
+            }
+            load_view($data);
+            return;
+          }
+          else
+          {
+            $data["email_notif"] = $this->input->post("email_notif");
+            load_view($data);
+            return;
+          }
+        }
+        else
+        {
+          $user_profile_values = $this->user->get_user_details()[0];
+          $data["fname"] = $user_profile_values->fname;
+          $data["lname"] = $user_profile_values->lname;
+          $data["email"] = $user_profile_values->email;
+          $data["email_notif"] = $user_profile_values->email_notif;
+          load_view($data);
+          return;
+        }
+      }
+      else
+      {
+          redirect(site_url()."/site/restricted");
+      }
+    }
+
+    function forgot_password()
+    {
+      $data["main_content"] = "main_pages/forgot_password";
+      $data["page_title"] = "Forgot Password";
+      load_view($data);
+    }
+
+    function user_security()
+    {
+      if($this->session->is_logged_in)
+      {
+        $data["page_title"] = "Security";
+        $data["main_content"] = "main_pages/settings_views/security";
+        if($_SERVER["REQUEST_METHOD"] === "POST")
+        {
+
+        }
+        else
+        {
+          load_view($data);
+          return;
+        }
+      }
+      else
+      {
+          redirect(site_url()."/site/restricted");
+      }
+    }
+
+    function is_valid_update($new_email)
+    {
+      if($new_email === $this->session->email)
+      {
+        return TRUE;
+      }
+      else
+      {
+        $exists = $this->user->user_exists($new_email);
+        if(!$exists)
+        {
+          return TRUE;
+        }
+        else
+        {
+          $this->form_validation->set_message("is_valid_update","A user with that email already exists");
+          return FALSE;
+        }
+      }
     }
   }
 ?>

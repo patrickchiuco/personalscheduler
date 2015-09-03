@@ -7,14 +7,28 @@
 
     }
 
+    function update_user_profile($updates)
+    {
+      $updated = $this->db->where("email",$this->session->email)->update("Scheduler_User",$updates);
+      return $updated;
+    }
+
     function get_user_details()
     {
-
+      $user_details = $this->db->select("*")->where("email",$this->session->email)->get("Scheduler_User");
+      if($user_details->num_rows() > 0)
+      {
+        return $user_details->result();
+      }
+      else
+      {
+        return NULL;
+      }
     }
 
     function user_exists($email)
     {
-      $result = $this->db->select("email, password")->where("email",$email)->get("Scheduler_User");
+      $result = $this->db->select("*")->where("email",$email)->get("Scheduler_User");
       if($result->num_rows())
       {
         return TRUE;
@@ -40,7 +54,7 @@
             "message" => "Authetication succeeded",
             "is_authenticated" => TRUE,
             "fname" => $user_data->fname,
-            "mname" => $user_data->mname,
+            //"mname" => $user_data->mname,
             "lname" => $user_data->lname,
             "email_notif" => $user_data->email_notif,
           );
