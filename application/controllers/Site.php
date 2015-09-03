@@ -1,27 +1,19 @@
 <?php
-  //plan implementation next time (avoid brute force)
-  // lagyan ng crazy test cases
-  // follow best practices
-  // never hold back maalala wag kontrolin maalala
-  // never hold back maalala ang alam ko
-  // never hold back maalala ang up
-  // ok lang maalala ang alam
-  /*
-    I-refactor ang code.
-    Ayusin ang mga magugulo. Planuhin ng mabuti before gawin.
-    Finish this para lang mag prototype at may mapakita.
-  */
   class Site extends CI_Controller
   {
     private $template;
     private $today;
+    var $cal_prefs;
     function __construct()
     {
       parent::__construct();
+
       $this->load->model("User","user");
       $this->load->model("Event","event");
+
       date_default_timezone_set("Asia/Manila");
       $this->today = new DateTime();
+
       $this->template = '{table_open}<table border="0" cellpadding="0" cellspacing="0" class="calendar table-responsive">{/table_open}
 
         {heading_row_start}<tr class="heading-row-start">{/heading_row_start}
@@ -65,11 +57,17 @@
         {cal_row_end}</tr>{/cal_row_end}
 
         {table_close}</table>{/table_close}';
+        $this->cal_prefs = array(
+          "show_next_prev" => TRUE,
+          "next_prev_url" => site_url()."/site/user_page",
+          "template" => $this->template,
+          "day_type" => "long",
+        );
     }
 
     function index()
     {
-      if($this->session->is_logged_in)
+      if($this->session->logged_in)
       {
         redirect(site_url()."/site/user_page");
       }
@@ -77,7 +75,7 @@
       {
         $data["main_content"] = "main_pages/login";
         $data["page_title"] = "Login Page";
-        $this->load->view("common_views/base",$data);
+        load_view($data);
       }
     }
 
@@ -86,60 +84,52 @@
       $data["page_title"] = "Log in Page";
       if($_SERVER["REQUEST_METHOD"] == "POST")
       {
-        $this->form_validation->set_rules("email","email ","required|valid_email|trim");
-        $this->form_validation->set_rules("password","password ","required|trim|min_length[8]");
+        $this->form_validation->set_rules("email", "email ", "required|valid_email|trim");
+        $this->form_validation->set_rules("password", "password ", "required|trim|min_length[8]");
+        $data["main_content"] = "main_pages/login";
         if($this->form_validation->run())
         {
-            $input["email"] = $this->input->post("email");
-            $input["password"] = $this->input->post("password");
-            $auth_result = $this->user->authenticate($input);
-            if($auth_result["is_authenticated"])
+            $email = $this->input->post("email");
+            $password = $this->input->post("password");
+            $result = $this->user->authenticate($email, $password);
+            if($result["authenticated"])
             {
               $user_data = array(
-                "email" => $input["email"],
-                "first_name" => $auth_result["fname"],
-                //"middle_name" => $auth_result["mname"],
-                "last_name" => $auth_result["lname"],
-                "email_notif" => $auth_result["email_notif"],
-                "is_logged_in" => 1,
+                "email" => $email,
+                "first_name" => $result["fname"],
+                "last_name" => $result["lname"],
+                "email_notif" => $result["email_notif"],
+                "logged_in" => 1,
               );
               $this->session->set_userdata($user_data);
               redirect("site/user_page");
             }
             else
             {
-              $data["main_content"] = "main_pages/login";
-              $data["errors"] = $auth_result["message"];
               $data["err_src"] = $auth_result["err_src"];
-              $data["has_error"] = TRUE;
-              $this->load->view("common_views/base",$data);
+              load_view($data);
+              return;
             }
         }
         else
         {
-          $data["main_content"] = "main_pages/login";
-          $this->load->view("common_views/base",$data);
+          load_view($data);
+          return;
         }
       }
       else
       {
-        $data["main_content"] = "main_pages/login";
-        $this->load->view("common_views/base",$data);
+        load_view($data);
+        return;
       }
-
     }
 
     function user_page()
     {
-      if($this->session->is_logged_in)
+      if($this->session->logged_in)
       {
-        $prefs = array(
-          "show_next_prev" => TRUE,
-          "next_prev_url" => site_url()."/site/user_page",
-          "template" => $this->template,
-          "day_type" => "long",
-        );
-        $this->load->library("calendar", $prefs);
+
+        $this->load->library("calendar", $this->cal_prefs);
         if($this->uri->segment(3) !== NULL)
         {
             $date_received = $this->uri->segment(3)."-".$this->uri->segment(4);
@@ -224,7 +214,7 @@
                 "verification_code" => md5($this->input->post('email')),
             );
             $has_created = $this->user->create_user($user_data);
-            $has_sent = $this->user->send_verification_email($user_data["email"],$user_data["verification_code"]);
+            $has_sent = $this->user->send_verification_email($user_data["email"],$user_data["verification_code"],FALSE);
             if($has_sent)
             {
               if($has_created)
@@ -233,7 +223,7 @@
                 $this->session->set_userdata("fname",$user_data["fname"]);
                 $this->session->set_userdata("lname",$user_data["lname"]);
                 $this->session->set_userdata("email_notif",$user_data["email_notif"]);
-                $this->session->set_userdata("is_logged_in",1);
+                $this->session->set_userdata("logged_in",1);
                 redirect(base_url().'index.php/site/user_page');
               }
               else
@@ -269,30 +259,31 @@
     function verify($verification_text = NULL)
     {
       $has_verfied = $this->user->verify_email_address($verification_text);
+      $data["logged_in"] = $this->session->logged_in;
       if($has_verfied)
       {
-        $error = array("success" => "Email verification successful!");
+        $data["verified"] = TRUE;
       }
       else
       {
-        $error = array("error" => "Sorry unable to verify your email.");
+        $data["verified"] = FALSE;
       }
-      $data["message"] = $error;
       $data["main_content"] = "confirmation_pages/verification";
       load_view($data);
     }
 
-    function send_verification_email($email, $verification_text)
+    function send_verification_email($email, $verification_text, $resent)
     {
       $has_sent = $this->user->send_verification_email($email,$verification_text);
       $data["main_content"] = "confirmation_pages/verification";
+      $data["resent"] = $resent;
       if($has_sent)
       {
-        $data["message"] = "Verification was sent.";
+        $data["sent"] = TRUE;
       }
       else
       {
-        $data["message"] = "Email sending failed.";
+        $data["sent"] = FALSE;
       }
       load_view($data);
     }
@@ -305,7 +296,7 @@
 
     function user_profile()
     {
-      if($this->session->is_logged_in)
+      if($this->session->logged_in)
       {
         $data["page_title"] = "User Profile";
         $data["main_content"] = "main_pages/settings_views/user_profile";
@@ -319,6 +310,7 @@
           $data["fname"] = $user_profile_values->fname;
           $data["lname"] = $user_profile_values->lname;
           $data["email"] = $user_profile_values->email;
+          $data["verified"] = $user_profile_values->verified;
           $data["email_notif"] = intval($user_profile_values->email_notif);
           load_view($data);
           return;
@@ -332,7 +324,7 @@
 
     function user_profile_edit()
     {
-      if($this->session->is_logged_in)
+      if($this->session->logged_in)
       {
         $data["page_title"] = "User Profile";
         $data["main_content"] = "main_pages/settings_views/user_profile_edit";
@@ -391,20 +383,26 @@
 
     function forgot_password()
     {
-      $data["main_content"] = "main_pages/forgot_password";
+      $data["main_content"] = "main_pages/forgot_password_view";
       $data["page_title"] = "Forgot Password";
-      load_view($data);
-    }
-
-    function user_security()
-    {
-      if($this->session->is_logged_in)
+      $data["validated"] = FALSE;
+      if($_SERVER["REQUEST_METHOD"] == "POST")
       {
-        $data["page_title"] = "Security";
-        $data["main_content"] = "main_pages/settings_views/security";
-        if($_SERVER["REQUEST_METHOD"] === "POST")
+        $this->form_validation->set_rules("forgot-password-email","email", array('required', 'trim', 'valid_email',array('exists_callable',array($this->user, 'user_exists'))));
+        $this->form_validation->set_message('exists_callable','The email you entered is not in our database.');
+        if($this->form_validation->run())
         {
-
+          $data["validated"] = TRUE;
+          $sent = $this->user->send_forgot_password_email($this->input->post('forgot-password-email'));
+          if($sent)
+          {
+            $data["sent"] = TRUE;
+          }
+          else
+          {
+            $data["sent"] = FALSE;
+          }
+          load_view($data);
         }
         else
         {
@@ -414,7 +412,49 @@
       }
       else
       {
-          redirect(site_url()."/site/restricted");
+          load_view($data);
+          return;
+      }
+    }
+
+    function forgot_password_confirm($code)
+    {
+      $is_verified = $this->user->verify_code($code);
+      $data["page_title"] = "Reset Password";
+      $data["main_content"] = "main_pages/forgot_password_confirm_view";
+      if($is_verified["verified"])
+      {
+        $this->form_validation->set_rules("fpassword","password","required|trim|min_length[8]");
+        $this->form_validation->set_rules("fpassword_conf","confirm password","required|trim|matches[fpassword]");
+        if($this->form_validation->run())
+        {
+          $password = $this->input->post("fpassword");
+          $updated = $this->user->update_password($is_verified["email"],$password);
+          $data["main_content"] = "main_pages/reset_password_confirm_view";
+          $data["page_title"] = "Reset Password";
+          if($updated)
+          {
+            $data["updated"] = TRUE;
+          }
+          else
+          {
+            $data["updated"] =  FALSE;
+          }
+          load_view($data);
+          return;
+        }
+        else
+        {
+            $data["valid_code"] = TRUE;
+            $data["code"] = $code;
+            load_view($data);
+        }
+      }
+      else
+      {
+        $data["valid_code"] = FALSE;
+        load_view($data);
+        return;
       }
     }
 
@@ -437,6 +477,12 @@
           return FALSE;
         }
       }
+    }
+
+    function resend_verification()
+    {
+      $verification_text = md5($this->session->email);
+      $this->send_verification_email($this->session->email,$verification_text,TRUE);
     }
   }
 ?>

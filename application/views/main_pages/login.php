@@ -11,7 +11,7 @@
           <div class="col-xs-9 col-md-9">
             <?php echo form_input("email",set_value("email"),"class='form-control' id='email' placeholder='Enter your email.' title='The email you used to log in to the site.' "); ?>
             <span class="error"><?php echo form_error("email");?></span>
-            <span class="error"><?php if((isset($err_src) && ($err_src == 'e'))){ echo $errors; }?></span>
+            <span class="error"><?php if((isset($err_src) && ($err_src == 'e'))){ echo "User not found."; }?></span>
           </div>
         </div>
         <div class="form-group <?php if((isset($err_src) && ($err_src == 'm' || $err_src == 'em')) || form_error('password') != ''){echo 'has-error'; }?>">
@@ -19,7 +19,7 @@
           <div class='col-xs-9 col-md-9'>
             <?php echo form_password("password",set_value("password"),"class='form-control' id='password' placeholder='Enter your password.' title='Your password.' "); ?>
             <span class="error"><?php echo form_error("password"); ?></span>
-            <span class="error"><?php if((isset($err_src) && ($err_src == 'em'))){ echo $errors; }?></span>
+            <span class="error"><?php if((isset($err_src) && ($err_src == 'em'))){ echo "Username and password did not match."; }?></span>
           </div>
         </div>
         <div class="form-group">
