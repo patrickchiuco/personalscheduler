@@ -78,3 +78,33 @@
 {
   color: #A94442;
 }
+
+.cal-start
+{
+  border
+}
+
+.cal-row-start td, .week-row-start td
+{
+  padding: 0.5% 1% 3%;
+  border: 1px solid #DDDDDD;
+
+}
+
+.heading-row-start th
+{
+  padding: 2%;
+}
+.calendar
+{
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 20px;
+}
+
+.search-accordion-heading
+{
+  font-size: 1.1em;
+  text-decoration: none;
+  color: #000000;
+}
