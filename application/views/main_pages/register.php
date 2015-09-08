@@ -1,5 +1,4 @@
 <main class="container" id="contents">
-    <?php //echo validation_errors("<div class='error'>","</div>");?>
   <div class="row">
     <div class="col-xs-1 col-md-3">
     </div>
@@ -35,10 +34,10 @@
           <div class="form-group">
             <?php echo form_label("Email notification: ","email_notif", array("class" => "control-label"));?>
             <label class="checkbox-inline control-label" for="email_notif_yes" title="Check yes if you want your events mailed to you.">
-                <?php echo form_radio("email_notif","Yes",($wants_email == 1) ? 1 : 0,'id="email_notif_yes" title="Check yes if you want your events mailed to you." ');?> Yes
+                <?php echo form_radio("email_notif",1,(isset($email_notif) && ($email_notif)) ? 1 : 0,'id="email_notif_yes" title="Check yes if you want your events mailed to you." ');?> Yes
             </label>
             <label class="checkbox-inline control-label" for="email_notif_no" title="Check no if you don't want your events sent to you.">
-              <?php echo form_radio("email_notif","No",($wants_email == 1) ? 0 : 1,'id="email_notif_no" title="Check no if you don\'t want your events sent to you." ');?> No
+              <?php echo form_radio("email_notif",0,(isset($email_notif) && ($email_notif)) ? 0 : 1,'id="email_notif_no" title="Check no if you don\'t want your events sent to you." ');?> No
             </label>
           </div>
           <div class="form-group">
@@ -53,11 +52,11 @@
               </div>
             </div>
           </div>
-        </form>
-    </div>
+          <?php echo form_close();?>
+        </div>
     <div class="col-xs-1 col-md-3">
     </div>
-    </div>
+  </div>
     <div class="row">
       <div class="col-xs-1 col-md-5">
       </div>

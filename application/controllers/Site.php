@@ -6,14 +6,17 @@
     var $cal_prefs;
     function __construct()
     {
-      parent::__construct();
 
+      parent::__construct();
+      //loading models to be used.
       $this->load->model("User","user");
       $this->load->model("Event","event");
 
+      //setting the time zone
       date_default_timezone_set("Asia/Manila");
       $this->today = new DateTime();
 
+      //calendar settings
       $this->template = '{table_open}<table border="0" cellpadding="0" cellspacing="0" class="calendar table-responsive">{/table_open}
 
         {heading_row_start}<tr class="heading-row-start">{/heading_row_start}
@@ -82,34 +85,40 @@
     function login()
     {
       $data["page_title"] = "Log in Page";
+      $data["main_content"] = "main_pages/login";
       if($_SERVER["REQUEST_METHOD"] == "POST")
       {
-        $this->form_validation->set_rules("email", "email ", "required|valid_email|trim");
-        $this->form_validation->set_rules("password", "password ", "required|trim|min_length[8]");
-        $data["main_content"] = "main_pages/login";
-        if($this->form_validation->run())
-        {
-            $email = $this->input->post("email");
-            $password = $this->input->post("password");
-            $result = $this->user->authenticate($email, $password);
-            if($result["authenticated"])
-            {
-              $user_data = array(
+          $this->form_validation->set_rules("email", "email ", "required|valid_email|trim");
+          $this->form_validation->set_rules("password", "password ", "required|trim|min_length[8]");
+          if($this->form_validation->run())
+          {
+              $email = $this->input->post("email");
+              $password = $this->input->post("password");
+              $result = $this->user->authenticate($email, $password);
+              if($result["authenticated"])
+              {
+                $user_data = array(
                 "email" => $email,
-                "first_name" => $result["fname"],
-                "last_name" => $result["lname"],
-                "email_notif" => $result["email_notif"],
-                "logged_in" => 1,
-              );
-              $this->session->set_userdata($user_data);
-              redirect("site/user_page");
-            }
-            else
-            {
-              $data["err_src"] = $auth_result["err_src"];
-              load_view($data);
-              return;
-            }
+                  "first_name" => $result["fname"],
+                  "last_name" => $result["lname"],
+                  "email_notif" => $result["email_notif"],
+                  "logged_in" => 1,
+                );
+                $this->session->set_userdata($user_data);
+                redirect("site/user_page");
+              }
+              else
+              {
+                $data["err_src"] = $result["err_src"];
+                load_view($data);
+                return;
+              }
+          }
+          else
+          {
+            load_view($data);
+            return;
+          }
         }
         else
         {
@@ -117,29 +126,21 @@
           return;
         }
       }
-      else
-      {
-        load_view($data);
-        return;
-      }
-    }
 
     function user_page()
     {
       if($this->session->logged_in)
       {
-
         $this->load->library("calendar", $this->cal_prefs);
         if($this->uri->segment(3) !== NULL)
         {
-            $date_received = $this->uri->segment(3)."-".$this->uri->segment(4);
+            $date = $this->uri->segment(3)."-".$this->uri->segment(4);
         }
         else
         {
-            $date_received = $this->today->format("Y-m");
+            $date = $this->today->format("Y-m");
         }
-
-        $rows = $this->create_content($date_received);
+        $rows = $this->create_content($date);
         $data = array(
           "fname" => $this->session->first_name,
           "mname" => $this->session->middle_name,
@@ -150,8 +151,6 @@
           "page_title" => "Chronos - User Dashboard",
           "events" => $rows["events"],
         );
-        //print_r($rows);
-        //die();
         load_view($data);
       }
       else
@@ -182,64 +181,43 @@
     function register()
     {
       $data["page_title"] = "Registration Page";
-      $data["wants_email"] = 1;
       if($_SERVER["REQUEST_METHOD"] == "POST")
       {
-        $this->form_validation->set_rules("email","email","required|valid_email|trim|is_unique[Scheduler_User.email]",array("is_unique" => "This %s already exists."));
+        $this->form_validation->set_rules("email","email","required|valid_email|trim|is_unique[Scheduler_User.email]",array("is_unique" => "This %s is already in our database."));
         $this->form_validation->set_rules("password","password ","required|min_length[8]|trim");
         $this->form_validation->set_rules("fname","first name ","required|trim");
         $this->form_validation->set_rules("lname", "last name ","required|trim");
         $this->form_validation->set_rules("email_notif", "email notification ","required");
         $this->form_validation->set_rules("con_password", "confirm password","required|matches[password]|trim");
-        $data["wants_email"] = ($this->input->post("email_notif") == "Yes") ? 1 : 0;
+        $data["email_notif"] = $this->input->post('email_notif');
         if($this->form_validation->run())
         {
           $email = $this->input->post("email");
-          $exists = $this->user->user_exists($email);
-          if($exists)
+          $user_data = array(
+              "email" => $this->input->post('email'),
+              "password" => md5($this->input->post('password')),
+              "fname" => $this->input->post('fname'),
+              "lname" => $this->input->post('lname'),
+              "verified" => 0,
+              "email_notif" => $data["email_notif"],
+              "verification_code" => md5($this->input->post('email')),
+          );
+          $has_sent = $this->user->send_verification_email($user_data["email"],$user_data["verification_code"],FALSE);
+          $has_created = $this->user->create_user($user_data);
+          if($has_created && $has_sent)
           {
-            $data["errors"] = "User already exists.";
-            $data['main_content'] = "main_pages/register";
-            load_view($data);
+              $this->session->set_userdata("email",$user_data["email"]);
+              $this->session->set_userdata("fname",$user_data["fname"]);
+              $this->session->set_userdata("lname",$user_data["lname"]);
+              $this->session->set_userdata("email_notif",$user_data["email_notif"]);
+              $this->session->set_userdata("logged_in",TRUE);
+              redirect(base_url().'index.php/site/user_page');
           }
           else
           {
-            $user_data = array(
-                "email" => $this->input->post('email'),
-                "password" => md5($this->input->post('password')),
-                "fname" => $this->input->post('fname'),
-                "lname" => $this->input->post('lname'),
-                "email_notif" => ($this->input->post('email_notif') == "Yes") ? 1: 0,
-                "verified" => 0,
-                "verification_code" => md5($this->input->post('email')),
-            );
-            $has_created = $this->user->create_user($user_data);
-            $has_sent = $this->user->send_verification_email($user_data["email"],$user_data["verification_code"],FALSE);
-            if($has_sent)
-            {
-              if($has_created)
-              {
-                $this->session->set_userdata("email",$user_data["email"]);
-                $this->session->set_userdata("fname",$user_data["fname"]);
-                $this->session->set_userdata("lname",$user_data["lname"]);
-                $this->session->set_userdata("email_notif",$user_data["email_notif"]);
-                $this->session->set_userdata("logged_in",1);
-                redirect(base_url().'index.php/site/user_page');
-              }
-              else
-              {
-                $data["main_content"] = "confirmation_pages/registration";
-                $data["message"] = "User was not created. Contact admin.";
-                load_view($data);
-              }
-            }
-            else
-            {
-              $data["main_content"] = "confirmation_pages/registration";
-              $data["message"] = "Verification email not sent; user was not created. Contact admin.";
-              load_view($data);
-            }
-
+            $data["main_content"] = "confirmation_pages/registration";
+            load_view($data);
+            return;
           }
         }
         else
@@ -298,14 +276,8 @@
     {
       if($this->session->logged_in)
       {
-        $data["page_title"] = "User Profile";
-        $data["main_content"] = "main_pages/settings_views/user_profile";
-        if($_SERVER["REQUEST_METHOD"] === "POST")
-        {
-
-        }
-        else
-        {
+          $data["page_title"] = "User Profile";
+          $data["main_content"] = "main_pages/settings_views/user_profile";
           $user_profile_values = $this->user->get_user_details()[0];
           $data["fname"] = $user_profile_values->fname;
           $data["lname"] = $user_profile_values->lname;
@@ -314,7 +286,6 @@
           $data["email_notif"] = intval($user_profile_values->email_notif);
           load_view($data);
           return;
-        }
       }
       else
       {

@@ -59,6 +59,34 @@
     }
 
 
+    function get_event_images($id)
+    {
+      $img_ids = $this->db->get_where("Scheduler_Event_Has",array("eid"=>$id));
+      $thumbs = array();
+      if($img_ids->num_rows() > 0)
+      {
+        foreach($img_ids->result() as $img_id)
+        {
+          $img_info = $this->db->select("file_name,thumb_name")->get_where("Scheduler_File",array("file_id" => $img_id->file_id));
+
+          if($img_info->num_rows() >0)
+          {
+            $thumbs[$img_id->file_id] = array(
+              "thumb_name" => $img_info->result()[0]->thumb_name,
+              "file_name" => $img_info->result()[0]->file_name,
+            );
+          }
+        }
+        return $thumbs;
+      }
+      else
+      {
+        return NULL;
+      }
+
+    }
+
+
     /*
       Get users with events today
     */

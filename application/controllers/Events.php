@@ -103,7 +103,7 @@
 
     function add_event()
     {
-      if($this->session->is_logged_in)
+      if($this->session->logged_in)
       {
         $data["page_title"] = "Add Event";
         $data["success"] = 0;
@@ -143,8 +143,6 @@
 
             if($_FILES["images"]["name"][0] !== "")
             {
-              //print_r($_FILES);
-              //die();
               $upload_successful = $this->upload_file();
 
               if($upload_successful["successful"])
@@ -207,26 +205,30 @@
 
     function view_event($id = NULL)
     {
-      if($this->session->is_logged_in)
+      if($this->session->logged_in)
       {
         $data = array(
           "page_title" => "Event Details",
           "main_content" => "main_pages/event_pages/view_event"
         );
+
         if($id)
         {
           $event = $this->event->get_event($id)[0];
-          $thumbs = $this->get_event_images($id);
+          $thumbs = $this->event->get_event_images($id);
           $data["eid"] = $event->eid;
           $data["event_name"] = $event->name;
           $data["event_desc"] = $event->description;
           $data["event_date"] = $event->date;
+          $data["event_year"] = substr($event->date,0,4);
+          $data["event_month"] = substr($event->date,5,2);
           $data["images"] = $thumbs;
+          $data["errors"] = FALSE;
           load_view($data);
         }
         else
         {
-          $data["errors"] = "Something went wrong. Contact administrator.";
+          $data["errors"] = TRUE;
           load_view($data);
         }
       }
@@ -236,36 +238,10 @@
       }
     }
 
-    /*
-      Move to model
-    */
-    function get_event_images($id)
-    {
-      $img_ids = $this->db->get_where("Scheduler_Event_Has",array("eid"=>$id));
-      $thumbs = array();
-      if($img_ids->num_rows() > 0)
-      {
-        foreach($img_ids->result() as $img_id)
-        {
-          $img_info = $this->db->select("thumb_name")->get_where("Scheduler_File",array("file_id" => $img_id->file_id));
-
-          if($img_info->num_rows() >0)
-          {
-            $thumbs[$img_id->file_id] = $img_info->result()[0]->thumb_name;
-          }
-        }
-        return $thumbs;
-      }
-      else
-      {
-        return NULL;
-      }
-
-    }
 
     function delete_event($id , $confirm = 0)
     {
-      if($this->session->is_logged_in)
+      if($this->session->logged_in)
       {
         $data["main_content"] = "main_pages/event_pages/delete_event";
         $data["confirm"] = $confirm;
@@ -303,7 +279,7 @@
 
     function edit_event($id)
     {
-      if($this->session->is_logged_in)
+      if($this->session->logged_in)
       {
         $data = array(
           "page_title" => "Edit Event",
@@ -460,7 +436,7 @@
 
     function search()
     {
-      if($this->session->is_logged_in)
+      if($this->session->logged_in)
       {
         /*
           TODO: Transfer ang formatting sa model

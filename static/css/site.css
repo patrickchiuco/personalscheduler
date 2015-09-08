@@ -58,6 +58,13 @@
   font-size: 1.5em;
 }
 
+.confirmation-messages-front-page
+{
+  margin: 5% 0;
+  font-size: 1.1em;
+}
+
+
 .navbar
 {
   margin-bottom: 0;
@@ -107,4 +114,14 @@
   font-size: 1.1em;
   text-decoration: none;
   color: #000000;
+}
+
+main
+{
+  margin-bottom: 3%;
+}
+
+.back-nav-front-page
+{
+    margin-top: 3%;
 }

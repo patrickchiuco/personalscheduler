@@ -1,5 +1,5 @@
 <main class="content">
-  <div class="jumbotron">
+  <div class="page-header">
     <h1 class="text-center"><?php echo $page_title; ?></h1>
   </div>
 

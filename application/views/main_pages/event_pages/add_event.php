@@ -1,5 +1,5 @@
 <main class="content">
-  <div class="jumbotron">
+  <div class="page-header">
     <h1 class="text-center">Add Event</h1>
   </div>
     <div class="container">

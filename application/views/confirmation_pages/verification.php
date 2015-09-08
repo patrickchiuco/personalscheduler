@@ -8,11 +8,16 @@
       <div class="text-center confirmation-messages">
         <?php if(isset($sent)):?>
           <?php if($sent):?>
-            Your email was <?php echo $resent ? 'resent' : 'sent';?> to your email.
+            <?php if($resent):?>
+              <?php echo $this->lang->line("ver_email_was_resent");?>
+            <?php else:?>
+              <?php echo $this->lang->line("ver_email_was_sent");?>
+            <?php endif; ?>
+             <?php echo $resent ? 'resent' : 'sent';?>
           <?php else: ?>
-            Resending your verification failed. Please contact your administrator.
+            <?php echo $this->lang->line("resending_verification_failed");?>
           <?php endif; ?>
-          <div class="row">
+          <div class="row back-nav-front-page">
             <div class="col-xs-4">
             </div>
             <div class="col-xs-4">
@@ -31,7 +36,7 @@
           <?php else: ?>
             Sorry unable to verify your email.
           <?php endif; ?>
-          
+
           <div></div>
           <div class="row">
             <div class="col-xs-4">

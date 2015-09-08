@@ -78,8 +78,9 @@
 
     function create_user($data)
     {
-      $result = $this->db->insert("Scheduler_User",$data);
-      return $result;
+      //$result = $this->db->insert("Scheduler_User",$data);
+      //return $result;
+      return FALSE;
     }
 
     function send_verification_email($email,$verification_text)
@@ -87,7 +88,7 @@
       $verification_link = site_url()."/site/verify/".$verification_text;
       $this->email->to($email);
       $this->email->subject("Email Verification");
-      $this->email->message("Please click the following URL to verify:\n\n".$verification_link);
+      $this->email->message("Please click the following URL to verify:\n\n".$verification_link."\n\nCheers,\nJacob");
       $this->db->where("email",$email)->update("Scheduler_User",array("verification_code" => $verification_text));
       if($this->email->send())
       {
